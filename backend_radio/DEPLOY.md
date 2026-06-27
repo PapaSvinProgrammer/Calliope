@@ -1,15 +1,5 @@
 # 🚀 Деплой Mordva Radio Backend на виртуальную машину
 
-## Содержание
-1. [Требования к VM](#требования-к-vm)
-2. [Быстрый старт](#быстрый-старт)
-3. [Пошаговая инструкция](#пошаговая-инструкция)
-4. [Проверка работы](#проверка-работы)
-5. [Управление](#управление)
-6. [Настройка Nginx (опционально)](#настройка-nginx-опционально)
-
----
-
 ## Требования к VM
 
 | Ресурс   | Минимум      |
@@ -17,9 +7,11 @@
 | OS       | Ubuntu 20.04+ / Debian 11+ |
 | CPU      | 1 ядро      |
 | RAM      | 2 ГБ        |
-| Disk     | 10 ГБ       |
+| Disk     | 5 ГБ        |
 | Docker   | 24+         |
 | Compose  | v2+         |
+
+> **База данных** уже запущена на VM (localhost:5432). Docker запускает только Spring Boot приложение.
 
 ---
 
@@ -30,11 +22,11 @@
 git clone <URL_РЕПОЗИТОРИЯ> radio-backend
 cd radio-backend
 
-# 2. Создайте .env из шаблона и задайте пароль
+# 2. Создайте .env из шаблона и задайте credentials для БД
 cp .env.example .env
-nano .env   # укажите реальный пароль для PostgreSQL
+nano .env
 
-# 3. Запустите всё одной командой
+# 3. Запустите
 docker compose up -d --build
 
 # 4. Готово! Бекенд доступен по адресу:
@@ -45,35 +37,30 @@ docker compose up -d --build
 
 ## Пошаговая инструкция
 
-### Шаг 1 — Установка Docker и Docker Compose
+### Шаг 1 — Установка Docker
 
 Если на VM ещё нет Docker:
 
 ```bash
-# Обновляем пакеты
 sudo apt update && sudo apt upgrade -y
-
-# Устанавливаем Docker
 curl -fsSL https://get.docker.com | sudo sh
-
-# Добавляем текущего пользователя в группу docker (чтобы без sudo)
 sudo usermod -aG docker $USER
 newgrp docker
 
-# Проверяем установку
+# Проверяем
 docker --version
 docker compose version
 ```
 
 ### Шаг 2 — Копирование проекта на VM
 
-**Вариант A — через Git (рекомендуется):**
+**Вариант A — через Git:**
 ```bash
 git clone <URL_РЕПОЗИТОРИЯ> radio-backend
 cd radio-backend
 ```
 
-**Вариант B — через scp (если нет Git-репозитория):**
+**Вариант B — через scp:**
 ```bash
 # На локальной машине:
 scp -r ./backend_radio user@<IP_VM>:~/radio-backend
@@ -82,56 +69,46 @@ scp -r ./backend_radio user@<IP_VM>:~/radio-backend
 cd ~/radio-backend
 ```
 
-### Шаг 3 — Настройка переменных окружения
+### Шаг 3 — Настройка подключения к БД
 
 ```bash
-# Копируем шаблон
 cp .env.example .env
-
-# Редактируем — обязательно задайте надёжный пароль!
 nano .env
 ```
 
 Содержимое `.env`:
 ```env
-POSTGRES_DB=radio
-POSTGRES_USER=radio
-POSTGRES_PASSWORD=ваш_надёжный_пароль_здесь
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/radio
+SPRING_DATASOURCE_USERNAME=radio
+SPRING_DATASOURCE_PASSWORD=ваш_пароль_от_БД
 ```
+
+> Приложение запускается в Docker с `network_mode: host`, поэтому `localhost` внутри контейнера = `localhost` VM, и подключение к PostgreSQL работает напрямую.
 
 ### Шаг 4 — Запуск
 
 ```bash
-# Собираем образ и запускаем контейнеры
 docker compose up -d --build
 ```
 
-При первом запуске:
-- Gradle скачает зависимости и соберёт JAR (~2-5 мин)
-- PostgreSQL создаст базу данных
-- Приложение запустится на порту 8080
+При первом запуске Gradle скачает зависимости и соберёт JAR (~2-5 мин).
 
 ### Шаг 5 — Проверка логов
 
 ```bash
 # Логи приложения
 docker compose logs -f app
-
-# Логи базы данных
-docker compose logs -f db
 ```
 
 ---
 
 ## Проверка работы
 
-После успешного запуска бекенд будет доступен по IP виртуальной машины:
-
 ```bash
-# Проверка health (если есть actuator) или просто API
+# Список городов
 curl http://<IP_VM>:8080/api/city
 
-# Список радиостанций
+# Все радиостанции
 curl http://<IP_VM>:8080/api/radio-stations
 
 # Поиск городов
@@ -154,21 +131,34 @@ curl "http://<IP_VM>:8080/api/city/search?name=Саранск"
 ## Управление
 
 ```bash
-# Остановить все контейнеры
+# Остановить контейнер
 docker compose down
-
-# Остановить и удалить данные БД (⚠️ все данные пропадут!)
-docker compose down -v
 
 # Пересобрать после изменений в коде
 docker compose up -d --build
 
-# Посмотреть статус контейнеров
+# Статус контейнера
 docker compose ps
 
-# Рестарт только приложения (без пересборки)
+# Рестарт приложения (без пересборки)
 docker compose restart app
 ```
+
+---
+
+## Открытие портов
+
+Если бекенд недоступен извне, убедитесь что порт 8080 открыт в файрволе:
+
+```bash
+# UFW (Ubuntu)
+sudo ufw allow 8080/tcp
+
+# iptables
+sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+```
+
+Также проверьте **security group / firewall** в панели облачного провайдера — порт 8080 должен быть открыт для входящих TCP-соединений.
 
 ---
 
@@ -206,29 +196,12 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
-## Открытие портов
-
-Если бекенд недоступен извне, убедитесь что порты открыты в файрволе:
-
-```bash
-# UFW (Ubuntu)
-sudo ufw allow 8080/tcp
-sudo ufw allow 80/tcp   # если настроен Nginx
-
-# Или iptables
-sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
-```
-
-Также проверьте настройки **security group / firewall** в панели управления облачным провайдером — порт 8080 должен быть открыт для входящих TCP-соединений.
-
----
-
 ## Структура Docker-файлов
 
 ```
 backend_radio/
 ├── Dockerfile              # Многоэтапная сборка (Gradle → JRE)
-├── docker-compose.yml      # PostgreSQL + Spring Boot
+├── docker-compose.yml      # Только Spring Boot (БД уже на VM)
 ├── .dockerignore            # Исключения для Docker-контекста
 ├── .env.example            # Шаблон переменных окружения
 └── DEPLOY.md               # Эта инструкция

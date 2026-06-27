@@ -1,23 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: radio-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-radio}
-      POSTGRES_USER: ${POSTGRES_USER:-radio}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-radio_secret}
-    ports:
-      # Expose DB port so you can connect from host with pgAdmin / DBeaver
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radio}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   app:
     build:
       context: .
@@ -28,13 +9,9 @@ services:
       # Map container port 8080 to host port 8080
       # Change the left side if you need a different host port, e.g. "80:8080"
       - "8080:8080"
+    # Use host network so the container can reach PostgreSQL on localhost:5432
+    network_mode: host
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-radio}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-radio}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-radio_secret}
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  pgdata:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5432/radio}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-radio}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-radio_secret}
