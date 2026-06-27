@@ -1,0 +1,45 @@
+# ===========================
+# Kotlin / Spring Boot / Gradle
+# ===========================
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Local configuration (contains SDK paths, secrets)
+local.properties
+
+# Spring Boot
+out/
+*.jar
+*.war
+*.ear
+*.log
+
+# Kotlin
+.kotlin/
+
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Application secrets
+application-secret.properties
