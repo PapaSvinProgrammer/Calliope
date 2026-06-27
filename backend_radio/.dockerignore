@@ -1,0 +1,12 @@
+.gradle/
+build/
+out/
+*.jar
+*.log
+.kotlin/
+local.properties
+application-secret.properties
+.git/
+.idea/
+*.md
+gradlew.bat
