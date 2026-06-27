@@ -2,16 +2,11 @@
 FROM gradle:8.12-jdk21 AS build
 WORKDIR /app
 
-# Copy Gradle wrapper and config first (leverages Docker cache)
-COPY gradle/ gradle/
-COPY gradlew build.gradle.kts settings.gradle.kts ./
+# Copy all project files first (gradlew needs the wrapper jar)
+COPY . .
+
+# Make gradlew executable
 RUN chmod +x gradlew
-
-# Download dependencies only (cached unless build files change)
-RUN ./gradlew dependencies --no-daemon || true
-
-# Copy source code
-COPY src/ src/
 
 # Build the JAR (skip tests for faster CI builds)
 RUN ./gradlew bootJar --no-daemon -x test
