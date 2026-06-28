@@ -5,12 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
+import com.mordva.feature.home.HomeScreen
+import com.mordva.navigation.Router
+import com.mordva.navigation.route.HomeRoute
 import com.mordva.radio.ui.theme.RadioCalliopeTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +22,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RadioCalliopeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                RadioApp()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun RadioApp() {
+    val backStack = rememberNavBackStack(Router.startDestination)
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RadioCalliopeTheme {
-        Greeting("Android")
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        NavDisplay(
+            backStack = backStack,
+            modifier = Modifier.fillMaxSize(),
+            entryProvider = { route ->
+                when (route) {
+                    is HomeRoute -> NavEntry(route) {
+                        HomeScreen()
+                    }
+
+                    else -> NavEntry(route) {}
+                }
+            },
+        )
     }
 }

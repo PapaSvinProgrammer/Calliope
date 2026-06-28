@@ -26,4 +26,6 @@ rootProject.name = "RadioCalliope"
 include(":app")
 include(":core")
 include(":core:network")
+include(":core:navigation")
 include(":features")
+include(":features:home")
