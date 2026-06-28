@@ -8,13 +8,12 @@ import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 
-class AndroidFeatureConventionPlugin : Plugin<Project> {
+class AndroidComposeLibraryConventionPlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         with(target) {
             pluginManager.apply("com.android.library")
             pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
-            pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
 
             extensions.configure<LibraryExtension>("android") {
                 compileSdk = 37
@@ -45,11 +44,6 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("androidx-compose-material3").get())
                 add("implementation", libs.findLibrary("androidx-compose-ui").get())
                 add("implementation", libs.findLibrary("androidx-compose-ui-tooling-preview").get())
-                add("implementation", libs.findLibrary("androidx-lifecycle-viewmodel-compose").get())
-                add("implementation", libs.findLibrary("koin-android").get())
-                add("implementation", libs.findLibrary("koin-compose").get())
-                add("implementation", libs.findLibrary("coil-compose").get())
-                add("implementation", project(":core:system-ui"))
             }
         }
     }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="DP1">1dp</dimen>
+    <dimen name="DP5">5dp</dimen>
+    <dimen name="DP8">8dp</dimen>
+    <dimen name="DP10">10dp</dimen>
+    <dimen name="DP12">12dp</dimen>
+    <dimen name="DP16">16dp</dimen>
+    <dimen name="DP24">24dp</dimen>
+    <dimen name="DP30">30dp</dimen>
+</resources>

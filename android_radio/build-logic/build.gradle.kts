@@ -24,5 +24,9 @@ gradlePlugin {
             id = "radio.android.feature"
             implementationClass = "com.mordva.build.AndroidFeatureConventionPlugin"
         }
+        register("androidComposeLibrary") {
+            id = "radio.android.compose.library"
+            implementationClass = "com.mordva.build.AndroidComposeLibraryConventionPlugin"
+        }
     }
 }

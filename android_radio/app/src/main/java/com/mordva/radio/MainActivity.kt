@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.mordva.feature.home.HomeScreen
+import com.mordva.feature.home.HomeScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
 import com.mordva.radio.ui.theme.RadioCalliopeTheme
@@ -22,14 +22,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RadioCalliopeTheme {
-                RadioApp()
+                ComposeRadioApp()
             }
         }
     }
 }
 
 @Composable
-fun RadioApp() {
+fun ComposeRadioApp() {
     val backStack = rememberNavBackStack(Router.startDestination)
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -39,7 +39,7 @@ fun RadioApp() {
             entryProvider = { route ->
                 when (route) {
                     is HomeRoute -> NavEntry(route) {
-                        HomeScreen()
+                        HomeScreenProvider()
                     }
 
                     else -> NavEntry(route) {}

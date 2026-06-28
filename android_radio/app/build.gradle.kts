@@ -25,7 +25,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:network"))
-    implementation(project(":core:navigation"))
-    implementation(project(":features:home"))
+    implementation(projects.core.network)
+    implementation(projects.core.navigation)
+    implementation(projects.features.home.presentation)
 }

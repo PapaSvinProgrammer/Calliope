@@ -34,6 +34,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("androidx-navigation3-runtime").get())
                 add("implementation", libs.findLibrary("androidx-navigation3-ui").get())
                 add("implementation", libs.findLibrary("kotlinx-serialization-json").get())
+                add("implementation", libs.findLibrary("koin-android").get())
                 add("debugImplementation", libs.findLibrary("androidx-compose-ui-tooling").get())
                 add("debugImplementation", libs.findLibrary("androidx-compose-ui-test-manifest").get())
                 add("testImplementation", libs.findLibrary("junit").get())
