@@ -1,19 +1,9 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("radio.android.library.core")
 }
 
 android {
     namespace = "com.mordva.network"
-    compileSdk {
-        version = release(37)
-    }
-
-    defaultConfig {
-        minSdk = 26
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
 
     buildTypes {
         release {
@@ -23,11 +13,6 @@ android {
         debug {
             buildConfigField("boolean", "IS_DEBUG", "true")
         }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 
     buildFeatures {
