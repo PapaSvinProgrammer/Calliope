@@ -57,9 +57,7 @@ internal class RetryInterceptor(
 
         oauthTokenProvider.update()
 
-        return originalRequest.newBuilder()
-            .header(OAUTH_HEADER, oauthTokenProvider.provide())
-            .build()
+        return originalRequest
     }
 
     private fun shouldRefreshToken(
@@ -102,6 +100,5 @@ internal class RetryInterceptor(
         )
 
         const val DEFAULT_MAX_RETRIES = 3
-        const val OAUTH_HEADER = "OAuth"
     }
 }
