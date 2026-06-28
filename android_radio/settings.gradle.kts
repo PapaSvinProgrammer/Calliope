@@ -24,3 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "RadioCalliope"
 include(":app")
+include(":core")
+include(":core:network")
+include(":features")
