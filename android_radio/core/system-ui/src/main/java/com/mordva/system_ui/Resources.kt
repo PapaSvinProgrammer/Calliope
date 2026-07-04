@@ -6,9 +6,17 @@ import androidx.compose.ui.unit.Dp
 
 object Resources {
     object Dimens {
+        val ZERO: Dp
+            @Composable
+            get() = dimensionResource(R.dimen.DP0)
+
         val DP1: Dp
             @Composable
             get() = dimensionResource(R.dimen.DP1)
+
+        val DP2: Dp
+            @Composable
+            get() = dimensionResource(R.dimen.DP2)
 
         val DP5: Dp
             @Composable
@@ -30,6 +38,10 @@ object Resources {
             @Composable
             get() = dimensionResource(R.dimen.DP16)
 
+        val DP20: Dp
+            @Composable
+            get() = dimensionResource(R.dimen.DP20)
+
         val DP24: Dp
             @Composable
             get() = dimensionResource(R.dimen.DP24)
@@ -37,5 +49,9 @@ object Resources {
         val DP30: Dp
             @Composable
             get() = dimensionResource(R.dimen.DP30)
+
+        val DP45: Dp
+            @Composable
+            get() = dimensionResource(R.dimen.DP45)
     }
 }

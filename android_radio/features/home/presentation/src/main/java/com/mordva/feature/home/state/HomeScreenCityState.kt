@@ -1,6 +1,6 @@
 package com.mordva.feature.home.state
 
-sealed interface HomeScreenCityState {
+internal sealed interface HomeScreenCityState {
     data object Error : HomeScreenCityState
 
     data object Loading : HomeScreenCityState

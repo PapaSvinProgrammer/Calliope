@@ -1,4 +1,4 @@
-package com.mordva.feature.home.design.progressbar
+package com.mordva.feature.home.component.progressbar
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -77,7 +77,7 @@ internal fun CustomProgressBar(
                 }
             )
             .padding(
-                vertical = Resources.Dimens.DP10,
+                vertical = Resources.Dimens.DP12,
                 horizontal = Resources.Dimens.DP24,
             ),
         contentAlignment = Alignment.Center,

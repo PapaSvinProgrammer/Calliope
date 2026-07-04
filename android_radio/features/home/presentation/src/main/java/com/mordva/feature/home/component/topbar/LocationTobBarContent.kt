@@ -1,4 +1,4 @@
-package com.mordva.feature.home.design.topbar
+package com.mordva.feature.home.component.topbar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

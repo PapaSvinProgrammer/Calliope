@@ -1,25 +1,32 @@
-package com.mordva.feature.home.design
+package com.mordva.feature.home.component
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import com.mordva.feature.home.design.progressbar.CustomProgressBar
+import com.mordva.feature.home.R
+import com.mordva.feature.home.component.progressbar.CustomProgressBar
 import com.mordva.feature.home.state.HomeScreenRadioState
-import com.mordva.system_ui.R
+import com.mordva.system_ui.Resources
+import com.mordva.system_ui.shimmer.shimmer
 
 @Composable
 internal fun ProgressBarControls(
@@ -30,14 +37,12 @@ internal fun ProgressBarControls(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         AnimatedVisibility(
-            visible = !isExpanded,
-            enter = fadeIn() + expandHorizontally(),
-            exit = fadeOut() + shrinkHorizontally()
+            visible = !isExpanded && state is HomeScreenRadioState.Success,
+            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start)
         ) {
             IconButton(onClick = onPauseClick) {
                 Icon(
@@ -56,14 +61,35 @@ private fun RowScope.RenderCustomProgressBar(
     state: HomeScreenRadioState,
 ) {
     when (state) {
-        HomeScreenRadioState.Error -> TODO()
-        HomeScreenRadioState.Loading -> Text(text = "Zalupa")
+        HomeScreenRadioState.Error -> {
+            CustomProgressBar(
+                currentValue = 0f,
+                maxValue = 1f,
+                title = stringResource(R.string.error_progress_bar_title),
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        HomeScreenRadioState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dimensionResource(R.dimen.progress_bar_shimmer_height))
+                    .clip(CircleShape)
+                    .shimmer()
+                    .padding(
+                        vertical = Resources.Dimens.DP12,
+                        horizontal = Resources.Dimens.DP24,
+                    ),
+            )
+        }
+
         is HomeScreenRadioState.Success -> {
             CustomProgressBar(
                 currentValue = state.currentValue,
                 maxValue = state.maxValue,
                 title = state.title,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
