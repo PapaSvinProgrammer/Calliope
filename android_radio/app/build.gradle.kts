@@ -28,4 +28,5 @@ dependencies {
     implementation(projects.core.network)
     implementation(projects.core.navigation)
     implementation(projects.features.home.presentation)
+    implementation(projects.features.controlBar)
 }

@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.mordva.control_bar.ControlBottomBar
 import com.mordva.feature.home.HomeScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
@@ -20,6 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             RadioCalliopeTheme {
                 ComposeRadioApp()
@@ -32,7 +35,12 @@ class MainActivity : ComponentActivity() {
 fun ComposeRadioApp() {
     val backStack = rememberNavBackStack(Router.startDestination)
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            ControlBottomBar()
+        }
+    ) { innerPadding ->
         NavDisplay(
             backStack = backStack,
             modifier = Modifier.fillMaxSize(),
