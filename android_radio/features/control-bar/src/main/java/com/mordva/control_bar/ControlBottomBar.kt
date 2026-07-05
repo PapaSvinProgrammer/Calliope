@@ -18,13 +18,15 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ControlBottomBar() {
+fun ControlBottomBar(
+    modifier: Modifier = Modifier,
+) {
     var searchState by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
+    var selectedItem by remember { mutableStateOf(ControlItem.HOME) }
 
     BoxWithConstraints(
-        modifier = Modifier
-            .padding(horizontal = 10.dp)
+        modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()
@@ -38,10 +40,12 @@ fun ControlBottomBar() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             ControlsLayout(
+                selectedItem = selectedItem,
+                onClick = { selectedItem = it },
                 modifier = Modifier
                     .padding(end = 10.dp)
                     .weight(1f)
-                    .clipToBounds()
+                    .clipToBounds(),
             )
 
             SearchLayout(
