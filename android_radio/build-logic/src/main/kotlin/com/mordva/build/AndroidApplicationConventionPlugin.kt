@@ -35,6 +35,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("androidx-navigation3-ui").get())
                 add("implementation", libs.findLibrary("kotlinx-serialization-json").get())
                 add("implementation", libs.findLibrary("koin-android").get())
+                add("implementation", libs.findLibrary("koin-compose").get())
                 add("implementation", libs.findLibrary("coil").get())
                 add("implementation", libs.findLibrary("coil-compose").get())
                 add("implementation", libs.findLibrary("coil-network-okhttp").get())

@@ -8,10 +8,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -21,11 +17,11 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ControlBottomBar(
     modifier: Modifier = Modifier,
+    searchExpanded: Boolean,
+    searchText: String,
+    selectedItem: ControlItem,
+    action: (BottomControlsAction) -> Unit,
 ) {
-    var searchState by remember { mutableStateOf(false) }
-    var searchText by remember { mutableStateOf("") }
-    var selectedItem by remember { mutableStateOf(ControlItem.HOME) }
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -43,7 +39,7 @@ fun ControlBottomBar(
         ) {
             ControlsLayout(
                 selectedItem = selectedItem,
-                onClick = { selectedItem = it },
+                onClick = { action(BottomControlsAction.Control.OnItemClick(it)) },
                 internalPadding = PaddingValues(
                     vertical = dimensionResource(R.dimen.controls_layout_vertical_padding)
                 ),
@@ -54,20 +50,14 @@ fun ControlBottomBar(
             )
 
             SearchLayout(
-                isExpanded = searchState,
+                isExpanded = searchExpanded,
                 searchText = searchText,
                 buttonSize = buttonSize,
                 spacing = spacing,
                 searchTextWidth = searchTextWidth,
-                onSearchClick = { searchState = !searchState },
-                onCloseClick = {
-                    if (searchText.isEmpty()) {
-                        searchState = !searchState
-                    }
-
-                    searchText = ""
-                },
-                onTextChanged = { searchText = it },
+                onSearchClick = { action(BottomControlsAction.Search.OnSearchClick) },
+                onCloseClick = { action(BottomControlsAction.Search.OnCloseClick) },
+                onTextChanged = { action(BottomControlsAction.Search.OnTextChanged(it)) },
             )
         }
     }

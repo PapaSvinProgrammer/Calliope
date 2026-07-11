@@ -8,6 +8,7 @@ import coil3.request.crossfade
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import com.mordva.feature.home.di.homeModule
+import com.mordva.radio.di.appModule
 
 class RadioApp : Application(), SingletonImageLoader.Factory {
 
@@ -15,7 +16,10 @@ class RadioApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         startKoin {
             androidContext(this@RadioApp)
-            modules(homeModule)
+            modules(
+                homeModule,
+                appModule,
+            )
         }
     }
 
