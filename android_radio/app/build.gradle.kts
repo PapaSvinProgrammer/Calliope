@@ -27,6 +27,9 @@ android {
 dependencies {
     implementation(projects.core.network)
     implementation(projects.core.navigation)
+    implementation(projects.core.systemUi)
     implementation(projects.features.home.presentation)
     implementation(projects.features.controlBar)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
 }

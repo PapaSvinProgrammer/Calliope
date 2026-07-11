@@ -10,7 +10,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
@@ -22,7 +21,8 @@ import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
 import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
-import com.mordva.radio.presentation.theme.RadioCalliopeTheme
+import com.mordva.radio.presentation.theme.AppTheme
+import com.mordva.system_ui.Resources
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            RadioCalliopeTheme {
+            AppTheme {
                 ComposeRadioApp()
             }
         }
@@ -53,7 +53,7 @@ private fun ComposeRadioApp(
                 searchText = uiState.searchText,
                 selectedItem = uiState.selectedItem,
                 action = { viewModel.action(it) },
-                modifier = Modifier.padding(10.dp),
+                modifier = Modifier.padding(Resources.Dimens.DP10),
             )
         }
     ) { innerPadding ->
