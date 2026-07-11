@@ -7,9 +7,11 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -17,7 +19,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,6 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -36,8 +41,10 @@ internal fun ControlsLayout(
     selectedItem: ControlItem,
     onClick: (ControlItem) -> Unit,
     modifier: Modifier = Modifier,
+    internalPadding: PaddingValues = PaddingValues(),
 ) {
     val density = LocalDensity.current
+    var containerHeight by remember { mutableStateOf(0.dp) }
 
     val itemPositions = remember { mutableStateMapOf<ControlItem, Offset>() }
     val itemSizes = remember { mutableStateMapOf<ControlItem, IntSize>() }
@@ -45,7 +52,7 @@ internal fun ControlsLayout(
     val selectedPosition = itemPositions[selectedItem] ?: Offset.Zero
     val selectedSize = itemSizes[selectedItem] ?: IntSize.Zero
 
-    val selectedExtraWidth = 20.dp
+    val selectedExtraWidth = dimensionResource(R.dimen.selected_extra_padding)
 
     val backgroundOffsetX by animateDpAsState(
         targetValue = with(density) { selectedPosition.x.toDp() } - selectedExtraWidth / 2,
@@ -63,7 +70,7 @@ internal fun ControlsLayout(
     )
 
     val backgroundHeight by animateDpAsState(
-        targetValue = with(density) { selectedSize.height.toDp() },
+        targetValue = containerHeight,
         animationSpec = createAnimationSpec()
     )
 
@@ -74,6 +81,9 @@ internal fun ControlsLayout(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = CircleShape,
             )
+            .onGloballyPositioned { coordinates ->
+                containerHeight = with(density) { coordinates.size.height.toDp() }
+            }
     ) {
         if (selectedSize != IntSize.Zero) {
             Box(
@@ -98,7 +108,9 @@ internal fun ControlsLayout(
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .padding(internalPadding)
+                .fillMaxWidth(),
         ) {
             SpringIconButton(
                 onClick = { onClick(ControlItem.HOME) },

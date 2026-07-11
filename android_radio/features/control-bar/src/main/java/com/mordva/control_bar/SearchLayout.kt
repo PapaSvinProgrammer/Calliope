@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
@@ -30,13 +29,13 @@ internal fun SearchLayout(
     isExpanded: Boolean,
     searchText: String,
     searchTextWidth: Dp,
+    buttonSize: Dp,
+    spacing: Dp,
     onSearchClick: () -> Unit,
     onCloseClick: () -> Unit,
     onTextChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val buttonSize = dimensionResource(R.dimen.control_bar_button_size)
-    val spacing = dimensionResource(R.dimen.control_bar_space_size)
     val animationDuration = integerResource(R.integer.control_button_animation_duration)
 
     Row(

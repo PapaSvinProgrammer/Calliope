@@ -1,6 +1,7 @@
 package com.mordva.control_bar
 
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -31,7 +32,8 @@ fun ControlBottomBar(
             .navigationBarsPadding()
             .imePadding()
     ) {
-        val buttonSize = dimensionResource(R.dimen.control_bar_button_size)
+        val extraSize = dimensionResource(R.dimen.controls_layout_vertical_padding) * 2
+        val buttonSize = dimensionResource(R.dimen.control_bar_button_size) + extraSize
         val spacing = dimensionResource(R.dimen.control_bar_space_size)
         val searchTextWidth = maxWidth - buttonSize - buttonSize - spacing
 
@@ -42,6 +44,9 @@ fun ControlBottomBar(
             ControlsLayout(
                 selectedItem = selectedItem,
                 onClick = { selectedItem = it },
+                internalPadding = PaddingValues(
+                    vertical = dimensionResource(R.dimen.controls_layout_vertical_padding)
+                ),
                 modifier = Modifier
                     .padding(end = 10.dp)
                     .weight(1f)
@@ -51,6 +56,8 @@ fun ControlBottomBar(
             SearchLayout(
                 isExpanded = searchState,
                 searchText = searchText,
+                buttonSize = buttonSize,
+                spacing = spacing,
                 searchTextWidth = searchTextWidth,
                 onSearchClick = { searchState = !searchState },
                 onCloseClick = {
@@ -60,7 +67,7 @@ fun ControlBottomBar(
 
                     searchText = ""
                 },
-                onTextChanged = { searchText = it }
+                onTextChanged = { searchText = it },
             )
         }
     }
