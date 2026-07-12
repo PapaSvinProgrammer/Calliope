@@ -1,24 +1,21 @@
 # ---- Build stage ----
+# Use a Gradle image with Gradle pre-installed to avoid downloading the
+# distribution inside the container (which can time out on restricted networks).
 FROM gradle:8.12-jdk21 AS build
 WORKDIR /app
 
-# Copy Gradle wrapper first (ensure JAR is present)
-COPY gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar
-COPY gradle/wrapper/gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
-COPY gradlew build.gradle.kts settings.gradle.kts ./
+# Copy build files first for better layer caching
+COPY build.gradle.kts settings.gradle.kts ./
 COPY gradle/gradle-daemon-jvm.properties gradle/gradle-daemon-jvm.properties
 
-# Make gradlew executable
-RUN chmod +x gradlew
-
 # Download dependencies (cached unless build files change)
-RUN ./gradlew dependencies --no-daemon || true
+RUN gradle dependencies --no-daemon || true
 
 # Copy source code
 COPY src/ src/
 
 # Build the JAR (skip tests for faster CI builds)
-RUN ./gradlew bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre-alpine
