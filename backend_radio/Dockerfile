@@ -1,7 +1,7 @@
 # ---- Build stage ----
 # Use a Gradle image with Gradle pre-installed to avoid downloading the
 # distribution inside the container (which can time out on restricted networks).
-FROM gradle:8.12-jdk21 AS build
+FROM gradle:8.14.5-jdk21-corretto AS build
 WORKDIR /app
 
 # Copy build files first for better layer caching
