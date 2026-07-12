@@ -33,6 +33,8 @@ import requests
 from db import (
     get_connection,
     init_db,
+    reconnect,
+    with_retry,
     upsert_station,
     upsert_city,
     link_station_city,
@@ -443,14 +445,17 @@ def choose_best_stream_moscow_priority(
 # Названия могут отличаться (например, «Мордовия» vs «Республика Мордовия»)
 _REGION_NAME_MAP: dict[str, str] = {
     "Адыгея": "Адыгея",
+    "Республика Адыгея": "Адыгея",
     "Алтайский край": "Алтайский край",
     "Амурская область": "Приамурье",
     "Архангельская область": "Архангельская область",
     "Астраханская область": "Астраханская область",
     "Башкортостан": "Башкортостан",
+    "Республика Башкортостан": "Башкортостан",
     "Белгородская область": "Белгородская область",
     "Брянская область": "Брянская область",
     "Бурятия": "Бурятия",
+    "Республика Бурятия": "Бурятия",
     "Владимирская область": "Владимирская область",
     "Волгоградская область": "Волгоградская область",
     "Вологодская область": "Вологодская область",
@@ -460,28 +465,37 @@ _REGION_NAME_MAP: dict[str, str] = {
     "Забайкальский край": "Забайкалье",
     "Ивановская область": "Ивановская область",
     "Ингушетия": "Ингушетия",
+    "Республика Ингушетия": "Ингушетия",
     "Иркутская область": "Иркутская область",
     "Кабардино-Балкарская республика": "Кабардино-Балкария",
+    "Кабардино-Балкария": "Кабардино-Балкария",
     "Калининградская область": "Калининградская область",
     "Калмыкия": "Калмыкия",
+    "Республика Калмыкия": "Калмыкия",
     "Калужская область": "Калужская область",
     "Камчатский край": "Камчатка",
     "Карачаево-Черкесская республика": "Карачаево-Черкесия",
+    "Карачаево-Черкесия": "Карачаево-Черкесия",
     "Карелия": "Карелия",
+    "Республика Карелия": "Карелия",
     "Кемеровская область": "Кемеровская область",
     "Кировская область": "Кировская область",
     "Коми": "Коми",
+    "Республика Коми": "Коми",
     "Костромская область": "Костромская область",
     "Краснодарский край": "Краснодарский край",
     "Красноярский край": "Красноярский край",
     "Крым": "Крым",
+    "Республика Крым": "Крым",
     "Курганская область": "Курганская область",
     "Курская область": "Курская область",
     "Ленинградская область": "Ленинградская область",
     "Липецкая область": "Липецкая область",
     "Магаданская область": "Магаданская область",
     "Марий Эл": "Марий Эл",
+    "Республика Марий Эл": "Марий Эл",
     "Мордовия": "Мордовия",
+    "Республика Мордовия": "Мордовия",
     "Москва": "Московская область",
     "Московская область": "Московская область",
     "Мурманская область": "Мурманская область",
@@ -503,35 +517,48 @@ _REGION_NAME_MAP: dict[str, str] = {
     "Санкт-Петербург": "Ленинградская область",
     "Саратовская область": "Саратовская область",
     "Саха (Якутия)": "Республика Саха",
+    "Республика Саха - Якутия": "Республика Саха",
+    "Республика Саха (Якутия)": "Республика Саха",
     "Сахалинская область": "Сахалинская область",
     "Свердловская область": "Свердловская область",
     "Северная Осетия-Алания": "Северная Осетия",
+    "Республика Северная Осетия-Алания": "Северная Осетия",
     "Смоленская область": "Смоленская область",
     "Ставропольский край": "Ставропольский край",
     "Тамбовская область": "Тамбовская область",
     "Татарстан": "Татарстан",
+    "Республика Татарстан": "Татарстан",
     "Тверская область": "Тверская область",
     "Томская область": "Томская область",
     "Тульская область": "Тульская область",
     "Тыва": "Тыва",
+    "Республика Тува": "Тыва",
     "Тюменская область": "Тюменская область",
     "Удмуртская Республика": "Удмуртия",
+    "Республика Удмуртия": "Удмуртия",
     "Ульяновская область": "Ульяновская область",
     "Хабаровский край": "Хабаровский край",
     "Хакасия": "Хакасия",
+    "Республика Хакасия": "Хакасия",
     "Ханты-Мансийский автономный округ - Югра": "Ханты-Мансийский автономный округ",
+    "Ханты-Мансийский автономный округ": "Ханты-Мансийский автономный округ",
     "Челябинская область": "Челябинская область",
     "Чеченская республика": "Чечня",
+    "Чеченская Республика": "Чечня",
     "Чувашская Республика": "Чувашия",
+    "Чувашия": "Чувашия",
     "Чукотский автономный округ": "Чукотка",
     "Ямало-Ненецкий автономный округ": "Ямало-Ненецкий автономный округ",
     "Ярославская область": "Ярославская область",
 }
 
 # Регулярки для парсинга страниц ph4.ru
+# Герб/флаг города: картинка (обязательно) + ссылка «Скачать» (необязательно —
+# на некоторых страницах ph4.ru есть картинка, но нет ссылки скачивания).
+# У некоторых городов вместо arms_ есть flags_ (напр. Ессентуки, Новый Уренгой).
 _PH4_CITY_ARMS_RE = re.compile(
-    r"<img src='(DL/HERALD/CITIES/ru/arms_[^']+)'[^>]*>.*?"
-    r"<a href='(_dl\.php\?back=arm&a=\d+&b=[^&]+&d=arms)'[^>]*>Скачать",
+    r"<img src='(DL/HERALD/CITIES/ru/(?:arms|flags)_[^']+)'[^>]*>"
+    r"(?:.*?<a href='(_dl\.php\?back=arm&a=\d+&b=[^&]+&d=(?:arms|flags))'[^>]*>Скачать)?",
     re.DOTALL,
 )
 _PH4_CITY_FLAG_RE = re.compile(
@@ -563,16 +590,27 @@ _PH4_REGION_LIST_RE = re.compile(
 )
 
 
-def _fetch_ph4_page(url: str) -> str | None:
-    """Скачивает страницу с ph4.ru и возвращает HTML или None."""
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        resp.encoding = "utf-8"
-        return resp.text
-    except requests.RequestException as e:
-        log.warning("Ошибка при скачивании ph4.ru %s: %s", url, e)
-        return None
+def _fetch_ph4_page(url: str, max_retries: int = 3) -> str | None:
+    """Скачивает страницу с ph4.ru и возвращает HTML или None.
+
+    Использует таймаут (connect, read) и повторяет попытку при сбое,
+    чтобы один зависший запрос не блокировал весь скрапинг.
+    """
+    import time as _time
+    # (connect_timeout, read_timeout) — read_timeout срабатывает, если
+    # между порциями данных проходит больше N секунд (защита от slow-drip).
+    timeout = (10, REQUEST_TIMEOUT)
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=timeout)
+            resp.raise_for_status()
+            resp.encoding = "utf-8"
+            return resp.text
+        except requests.RequestException as e:
+            log.warning("  Попытка %d/%d — ошибка %s: %s", attempt, max_retries, url, e)
+            if attempt < max_retries:
+                _time.sleep(2 * attempt)
+    return None
 
 
 def fetch_ph4_city_heraldry(city_ph4_id: int) -> dict | None:
@@ -593,7 +631,9 @@ def fetch_ph4_city_heraldry(city_ph4_id: int) -> dict | None:
         return None
 
     image_url = f"{PH4_BASE_URL}/{m.group(1)}"
-    download_url = f"{PH4_BASE_URL}/{m.group(2)}"
+    # download_url может отсутствовать (group(2) is None), если на странице
+    # нет ссылки «Скачать» — тогда используем сам image_url как download_url.
+    download_url = f"{PH4_BASE_URL}/{m.group(2)}" if m.group(2) else image_url
     return {
         "image_url": image_url,
         "download_url": download_url,
@@ -912,11 +952,14 @@ def _update_heraldry(conn):
     region_flag_cache: dict[str, int] = {}
 
     # 1) Обновить ссылки на гербы городов
-    cities_no_image = get_cities_without_images(conn)
+    cities_no_image, conn = with_retry(get_cities_without_images, conn)
     log.info("  Городов без герба: %d", len(cities_no_image))
 
     city_updated = 0
-    for city_id, city_name, region in cities_no_image:
+    city_total = len(cities_no_image)
+    for idx, (city_id, city_name, region) in enumerate(cities_no_image, 1):
+        if idx % 50 == 1 or idx == city_total:
+            log.info("  [%d/%d] Обрабатываю гербы городов...", idx, city_total)
         ph4_city_id = city_ph4_map.get(city_name)
         if ph4_city_id is None:
             log.debug("    Город '%s' не найден на ph4.ru", city_name)
@@ -926,9 +969,9 @@ def _update_heraldry(conn):
         source_url = f"{PH4_BASE_URL}/h_cities.php?d={ph4_city_id}"
 
         # Проверяем, не добавляли ли уже запись с этим source
-        existing = get_city_image_by_source(conn, source_url)
+        existing, conn = with_retry(get_city_image_by_source, conn, source_url)
         if existing is not None:
-            update_city_image_ids(conn, city_id, city_image_id=existing, region_image_id=None)
+            _, conn = with_retry(update_city_image_ids, conn, city_id, existing, None)
             city_updated += 1
             continue
 
@@ -937,34 +980,42 @@ def _update_heraldry(conn):
         if heraldry is None:
             continue
 
-        city_image_id = insert_city_image(
-            conn,
+        city_image_id, conn = with_retry(
+            insert_city_image, conn,
             image_url=heraldry["image_url"],
             download_url=heraldry["download_url"],
             source=source_url,
         )
         if city_image_id:
-            update_city_image_ids(conn, city_id, city_image_id=city_image_id, region_image_id=None)
+            _, conn = with_retry(update_city_image_ids, conn, city_id, city_image_id, None)
             city_updated += 1
             log.info("    🛡 Герб для '%s': %s", city_name, heraldry["image_url"])
 
         time.sleep(REQUEST_DELAY)
 
+        # Сохраняем прогресс каждые 50 городов
+        if idx % 50 == 0:
+            conn.commit()
+            log.info("  [промежуточный commit] обработано %d/%d, гербов: %d", idx, city_total, city_updated)
+
     conn.commit()
     log.info("  Гербы обновлены: %d / %d", city_updated, len(cities_no_image))
 
     # 2) Обновить ссылки на флаги регионов
-    cities_no_region = get_cities_without_region_image(conn)
+    cities_no_region, conn = with_retry(get_cities_without_region_image, conn)
     log.info("  Городов без флага региона: %d", len(cities_no_region))
 
     region_updated = 0
-    for city_id, city_name, region in cities_no_region:
+    region_total = len(cities_no_region)
+    for idx, (city_id, city_name, region) in enumerate(cities_no_region, 1):
+        if idx % 50 == 1 or idx == region_total:
+            log.info("  [%d/%d] Обрабатываю флаги регионов...", idx, region_total)
         if region is None:
             continue
 
         # Проверяем кэш
         if region in region_flag_cache:
-            update_city_image_ids(conn, city_id, city_image_id=None, region_image_id=region_flag_cache[region])
+            _, conn = with_retry(update_city_image_ids, conn, city_id, None, region_flag_cache[region])
             region_updated += 1
             continue
 
@@ -978,10 +1029,10 @@ def _update_heraldry(conn):
         source_url = f"{PH4_BASE_URL}/h_countries.php?d={ph4_region_id}"
 
         # Проверяем, не добавляли ли уже запись с этим source
-        existing = get_region_image_by_source(conn, source_url)
+        existing, conn = with_retry(get_region_image_by_source, conn, source_url)
         if existing is not None:
             region_flag_cache[region] = existing
-            update_city_image_ids(conn, city_id, city_image_id=None, region_image_id=existing)
+            _, conn = with_retry(update_city_image_ids, conn, city_id, None, existing)
             region_updated += 1
             continue
 
@@ -990,19 +1041,24 @@ def _update_heraldry(conn):
         if flag_data is None:
             continue
 
-        region_image_id = insert_region_image(
-            conn,
+        region_image_id, conn = with_retry(
+            insert_region_image, conn,
             image_url=flag_data["image_url"],
             download_url=flag_data["download_url"],
             source=source_url,
         )
         if region_image_id:
             region_flag_cache[region] = region_image_id
-            update_city_image_ids(conn, city_id, city_image_id=None, region_image_id=region_image_id)
+            _, conn = with_retry(update_city_image_ids, conn, city_id, None, region_image_id)
             region_updated += 1
             log.info("    🚩 Флаг для региона '%s': %s", region, flag_data["image_url"])
 
         time.sleep(REQUEST_DELAY)
+
+        # Сохраняем прогресс каждые 50 городов
+        if idx % 50 == 0:
+            conn.commit()
+            log.info("  [промежуточный commit] обработано %d/%d, флагов: %d", idx, region_total, region_updated)
 
     conn.commit()
     log.info("  Флаги регионов обновлены: %d / %d", region_updated, len(cities_no_region))

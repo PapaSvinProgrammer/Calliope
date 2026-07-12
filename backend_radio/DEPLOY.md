@@ -1,45 +1,63 @@
-# 🚀 Деплой Mordva Radio Backend на виртуальную машину
+# 🚀 Деплой Mordva Radio Backend на LAMP-сервер в Yandex Cloud
 
-## Требования к VM
+## Обзор архитектуры
 
-| Ресурс   | Минимум      |
-|----------|-------------|
-| OS       | Ubuntu 20.04+ / Debian 11+ |
-| CPU      | 1 ядро      |
-| RAM      | 2 ГБ        |
-| Disk     | 5 ГБ        |
-| Docker   | 24+         |
-| Compose  | v2+         |
+```
+Клиент ──HTTPS:443──► Apache (LAMP VM) ──HTTP:8080──► Spring Boot (Docker)
+                           │                                    │
+                     TLS-сертификат                    PostgreSQL :5432
+                  (Yandex Cloud Certificate Manager)    (LAMP VM)
+```
 
-> **База данных** уже запущена на VM (localhost:5432). Docker запускает только Spring Boot приложение.
+Spring Boot работает в Docker-контейнере с `network_mode: host` — контейнер обращается к PostgreSQL на `localhost:5432` напрямую. Apache принимает HTTPS-запросы и проксирует их на порт `8080`.
 
 ---
 
-## Быстрый старт
+## Требования к VM
+
+| Ресурс  | Минимум                                        |
+|---------|------------------------------------------------|
+| OS      | Ubuntu 20.04+ / Debian 11+                     |
+| CPU     | 1 ядро                                         |
+| RAM     | 2 ГБ                                           |
+| Disk    | 5 ГБ                                           |
+| Apache  | 2.4+ (уже установлен в LAMP)                   |
+| Docker  | 24+                                            |
+| Compose | v2+                                            |
+
+> **PostgreSQL** нужно установить отдельно — стандартный LAMP включает MySQL/MariaDB, но приложение работает с PostgreSQL.
+
+**Предварительные требования для Certificate Manager:**
+- Публичное доменное имя, чья A-запись указывает на публичный IP вашей VM
+- Установленный `yc` CLI (Yandex Cloud CLI)
+- Установленный `jq`
+
+---
+
+## Шаг 1 — Установка PostgreSQL
 
 ```bash
-# 1. Клонируйте репозиторий на VM
-git clone <URL_РЕПОЗИТОРИЯ> radio-backend
-cd radio-backend
+sudo apt update
+sudo apt install postgresql postgresql-contrib -y
 
-# 2. Создайте .env из шаблона и задайте credentials для БД
-cp .env.example .env
-nano .env
+sudo systemctl enable --now postgresql
+sudo systemctl status postgresql
+```
 
-# 3. Запустите
-docker compose up -d --build
+### Создание базы данных и пользователя
 
-# 4. Готово! Бекенд доступен по адресу:
-# http://<IP_МАШИНЫ>:8080/api/city
+```bash
+sudo -u postgres psql << 'EOF'
+CREATE USER radio WITH PASSWORD 'ваш_надёжный_пароль';
+CREATE DATABASE radio OWNER radio;
+GRANT ALL PRIVILEGES ON DATABASE radio TO radio;
+\q
+EOF
 ```
 
 ---
 
-## Пошаговая инструкция
-
-### Шаг 1 — Установка Docker
-
-Если на VM ещё нет Docker:
+## Шаг 2 — Установка Docker
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -52,208 +70,165 @@ docker --version
 docker compose version
 ```
 
-### Шаг 2 — Копирование проекта на VM
+---
 
-**Вариант A — через Git:**
+## Шаг 3 — Копирование проекта на VM
+
+**Через Git:**
 ```bash
 git clone <URL_РЕПОЗИТОРИЯ> radio-backend
 cd radio-backend
 ```
 
-**Вариант B — через scp:**
+**Или через scp (с локальной машины):**
 ```bash
-# На локальной машине:
 scp -r ./backend_radio user@<IP_VM>:~/radio-backend
-
-# На VM:
-cd ~/radio-backend
 ```
 
-### Шаг 3 — Настройка подключения к БД
+---
+
+## Шаг 4 — Настройка переменных окружения
 
 ```bash
+cd ~/radio-backend
 cp .env.example .env
 nano .env
 ```
 
-Содержимое `.env`:
+Заполните файл `.env`:
+
 ```env
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/radio
 SPRING_DATASOURCE_USERNAME=radio
-SPRING_DATASOURCE_PASSWORD=ваш_пароль_от_БД
+SPRING_DATASOURCE_PASSWORD=ваш_надёжный_пароль
 ```
 
-> Приложение запускается в Docker с `network_mode: host`, поэтому `localhost` внутри контейнера = `localhost` VM, и подключение к PostgreSQL работает напрямую.
+> Контейнер использует `network_mode: host`, поэтому `localhost` внутри контейнера = `localhost` VM.
 
-### Шаг 4 — Запуск
+---
+
+## Шаг 5 — Запуск Spring Boot
 
 ```bash
 docker compose up -d --build
 ```
 
-При первом запуске Gradle скачает зависимости и соберёт JAR (~2-5 мин).
-
-### Шаг 5 — Проверка логов
+При первом запуске Gradle скачает зависимости и соберёт JAR (~2–5 мин). Следите за прогрессом:
 
 ```bash
-# Логи приложения
 docker compose logs -f app
 ```
 
----
-
-## Проверка работы
-
-```bash
-# Список городов
-curl http://<IP_VM>:8080/api/city
-
-# Все радиостанции
-curl http://<IP_VM>:8080/api/radio-stations
-
-# Поиск городов
-curl "http://<IP_VM>:8080/api/city/search?name=Саранск"
+Успешный старт:
+```
+Started DemoApplication in 4.312 seconds
 ```
 
-### Доступные эндпоинты
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | `/api/city` | Список городов (пагинация: `?page=0&size=20`) |
-| GET | `/api/city/{id}/radio-stations` | Радиостанции города |
-| GET | `/api/city/search?name=...` | Поиск городов по названию |
-| GET | `/api/radio-stations` | Все радиостанции |
-| GET | `/api/radio-stations/{id}` | Радиостанция по ID |
-| GET | `/api/radio-stations/search?name=...` | Поиск радиостанций |
-
----
-
-## Управление
-
+Проверьте локально:
 ```bash
-# Остановить контейнер
-docker compose down
-
-# Пересобрать после изменений в коде
-docker compose up -d --build
-
-# Статус контейнера
-docker compose ps
-
-# Рестарт приложения (без пересборки)
-docker compose restart app
+curl http://localhost:8080/api/city
 ```
 
 ---
 
-## Открытие портов
+## Шаг 6 — Настройка Apache как reverse proxy
 
-Если бекенд недоступен извне, убедитесь что порт 8080 открыт в файрволе:
+### Включение необходимых модулей
 
 ```bash
-# UFW (Ubuntu)
-sudo ufw allow 8080/tcp
-
-# iptables
-sudo iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+sudo a2enmod proxy proxy_http ssl headers rewrite
+sudo systemctl restart apache2
 ```
 
-Также проверьте **security group / firewall** в панели облачного провайдера — порт 8080 должен быть открыт для входящих TCP-соединений.
+### Виртуальный хост для HTTP (временный, для прохождения ACME-challenge)
+
+Создайте `/etc/apache2/sites-available/radio-backend.conf`:
+
+```apache
+<VirtualHost *:80>
+    ServerName your-domain.com
+
+    # Директория для ACME-challenge (Yandex Cloud Certificate Manager)
+    Alias /.well-known/acme-challenge/ /var/www/html/.well-known/acme-challenge/
+    <Directory "/var/www/html/.well-known/acme-challenge/">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Проксирование на Spring Boot
+    ProxyPreserveHost On
+    ProxyPass        /.well-known/acme-challenge/ !
+    ProxyPass        / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+
+    RequestHeader set X-Forwarded-Proto "http"
+
+    ErrorLog  ${APACHE_LOG_DIR}/radio-backend-error.log
+    CustomLog ${APACHE_LOG_DIR}/radio-backend-access.log combined
+</VirtualHost>
+```
+
+> ⚠️ Замените `your-domain.com` на ваш реальный домен.
+
+```bash
+sudo a2ensite radio-backend.conf
+sudo a2dissite 000-default.conf   # опционально
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+```
 
 ---
 
-## Настройка Nginx (опционально)
+## Шаг 7 — Получение HTTPS-сертификата через Yandex Cloud Certificate Manager
 
-Если вы хотите, чтобы бекенд был доступен на 80-м порту или по домену:
+### 7.1. Установка инструментов
 
-```bash
-sudo apt install nginx -y
-```
-
-Создайте конфиг `/etc/nginx/sites-available/radio-backend`:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;  # или IP машины
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+> **Если `apt` выдаёт `Could not get lock /var/lib/dpkg/lock-frontend`** — дождитесь завершения фонового обновления:
+> ```bash
+> sudo systemctl stop unattended-upgrades
+> ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/radio-backend /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
+# jq для парсинга JSON
+sudo apt install jq -y
 
-После этого бекенд будет доступен по `http://<IP_VM>/api/city` (без порта).
-
----
-
-## 🔒 Настройка HTTPS через Yandex Cloud
-
-В этом разделе описан полный процесс получения бесплатного TLS-сертификата через **Yandex Cloud Certificate Manager** и настройки Nginx для обслуживания бекенда по HTTPS.
-
-### Обзор архитектуры
-
-```
-Клиент ──HTTPS:443──► Nginx (VM) ──HTTP:8080──► Spring Boot (Docker)
-                         │
-                    TLS-сертификат
-                  из Yandex Cloud
-                  Certificate Manager
-```
-
-### Предварительные требования
-
-1. VM уже развёрнута в Yandex Cloud и доступна по публичному IP.
-2. Установлен и настроен Nginx (см. раздел «Настройка Nginx» выше).
-3. Есть доменное имя, чья A-запись указывает на публичный IP вашей VM.
-4. Установлен CLI-клиент `yc` (Yandex Cloud CLI) и выполнена авторизация.
-5. Установлен `jq` для парсинга JSON-ответов `yc`.
-
-### Шаг 1 — Установка Yandex Cloud CLI
-
-Если `yc` ещё не установлен:
-
-```bash
-# macOS
-brew install yandex-cloud-cli
-
-# Linux
+# Yandex Cloud CLI
 curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-exec bash
+source ~/.bashrc
 
-# Авторизация
-yc init
+# Проверить установку
+yc --version
 ```
 
-После `yc init` выберите облако, каталог и создайте профиль по умолчанию.
+### 7.1а. Авторизация yc CLI на headless VM (без браузера)
 
-### Шаг 2 — Создание сертификата в Certificate Manager
+Обычный `yc init` пытается открыть браузер, что не работает на сервере. Используйте OAuth-токен:
 
-Yandex Cloud Certificate Manager поддерживает два типа сертификатов:
+**На локальной машине** (с браузером) получите токен по ссылке:
+```
+https://oauth.yandex.ru/authorize?response_type=token&client_id=1a6990aa636648e9b2ef855fa7bec2fb
+```
 
-| Тип | Описание | Срок действия | Продление |
-|-----|----------|---------------|-----------|
-| **Let's Encrypt** | Бесплатный, автоматически проверяет домен через HTTP-01 | 90 дней | Автоматическое |
-| **Custom** | Загрузка собственного сертификата | По сертификату | Вручную |
-
-> **Рекомендация:** используйте **Let's Encrypt** — он бесплатный и автоматически продлевается.
-
-#### 2.1. Создание Let's Encrypt сертификата
+**На VM** настройте `yc` с токеном без интерактивного мастера:
 
 ```bash
-# Узнайте ID каталога
-yc config list
+# Подставьте ваши реальные значения
+YC_TOKEN="y0_AgAAAA..."        # OAuth-токен с локальной машины
+YC_CLOUD_ID="b1g..."           # ID облака: yc resource-manager cloud list
+YC_FOLDER_ID="b1g..."          # ID каталога: yc resource-manager folder list
 
-# Создайте сертификат
+yc config set token        "$YC_TOKEN"
+yc config set cloud-id     "$YC_CLOUD_ID"
+yc config set folder-id    "$YC_FOLDER_ID"
+
+# Проверка
+yc config list
+```
+
+### 7.2. Создание Let's Encrypt сертификата
+
+```bash
 yc certificate-manager certificate create \
   --name radio-backend-cert \
   --domains "your-domain.com" \
@@ -261,289 +236,292 @@ yc certificate-manager certificate create \
   --description "TLS cert for Mordva Radio Backend"
 ```
 
-> ⚠️ Замените `your-domain.com` на ваш реальный домен.
-
-#### 2.2. Прохождение проверки домена (HTTP-01 challenge)
-
-После создания сертификата Yandex Cloud сгенерирует challenge для подтверждения владения доменом. Получите данные проверки:
+Сохраните ID сертификата:
 
 ```bash
-# Получите ID сертификата
 CERT_ID=$(yc certificate-manager certificate list --format json | \
   jq -r '.[] | select(.name=="radio-backend-cert") | .id')
-
-# Получите challenge
-yc certificate-manager certificate get --id "$CERT_ID" --format json | \
-  jq '.challenges'
+echo "CERT_ID=$CERT_ID"
 ```
 
-В ответе вы увидите что-то вроде:
+### 7.3. Прохождение HTTP-01 challenge
 
+Получите данные для проверки домена:
+
+```bash
+yc certificate-manager certificate get --id "$CERT_ID" --format json | \
+  jq '.challenges[]'
+```
+
+Вы получите объект вида:
 ```json
 {
-  "challenges": [
-    {
-      "type": "HTTP",
-      "created": "2025-01-15T10:00:00Z",
-      "updated": "2025-01-15T10:00:00Z",
-      "status": "PENDING",
-      "message": "Create a file with the specified content at the specified path",
-      "path": "/.well-known/acme-challenge/<TOKEN>",
-      "content": "<KEY_AUTHORIZATION>"
-    }
-  ]
+  "type": "HTTP",
+  "status": "PENDING",
+  "path": "/.well-known/acme-challenge/<TOKEN>",
+  "content": "<KEY_AUTHORIZATION>"
 }
 ```
 
-Создайте файл проверки на VM:
+Создайте файл проверки:
 
 ```bash
-# Создайте директорию для ACME challenge
 sudo mkdir -p /var/www/html/.well-known/acme-challenge
-
-# Создайте файл с токеном (подставьте значения из ответа yc)
-echo "<KEY_AUTHORIZATION>" | sudo tee /var/www/html/.well-known/acme-challenge/<TOKEN>
-
-# Установите права
 sudo chown -R www-data:www-data /var/www/html/.well-known
 sudo chmod -R 755 /var/www/html/.well-known
+
+# Подставьте реальные значения TOKEN и KEY_AUTHORIZATION из команды выше
+echo "<KEY_AUTHORIZATION>" | \
+  sudo tee /var/www/html/.well-known/acme-challenge/<TOKEN>
 ```
 
-Добавьте в Nginx блок обслуживания ACME challenge (в конфиг `radio-backend`):
-
-```nginx
-# Вставьте ВНЕ блока server { } или добавьте отдельный server block:
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    # ACME challenge для Certificate Manager
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    # Проксирование на Spring Boot
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+Проверьте, что файл доступен:
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
+curl http://your-domain.com/.well-known/acme-challenge/<TOKEN>
+# Ожидается: вывод KEY_AUTHORIZATION
 ```
 
-#### 2.3. Проверка статуса сертификата
+### 7.4. Ожидание выпуска сертификата
 
-Через 5–15 минут Yandex Cloud проверит домен и выпустит сертификат:
+Статус изменится с `VALIDATING` → `ISSUED` за 5–15 минут:
 
 ```bash
-yc certificate-manager certificate get --id "$CERT_ID" --format json | \
-  jq '{status: .status, domains: .domains, not_after: .not_after}'
+watch -n 30 "yc certificate-manager certificate get --id \"$CERT_ID\" --format json | \
+  jq '{status: .status, not_after: .not_after}'"
 ```
 
-Статус должен измениться с `VALIDATING` на `ISSUED`.
+### 7.5. Скачивание сертификата на VM
 
-### Шаг 3 — Скачивание сертификата на VM
-
-Когда сертификат выпущен, скачайте цепочку и приватный ключ:
+> Флаги `--chain` и `--key` принимают путь к файлу как аргумент. Скачиваем во временную папку, затем переносим через `sudo`.
 
 ```bash
-# Создайте директорию для сертификатов
-sudo mkdir -p /etc/nginx/ssl/radio-backend
-sudo chown $USER:$USER /etc/nginx/ssl/radio-backend
+sudo mkdir -p /etc/apache2/ssl/radio-backend
 
-# Скачайте сертификат (цепочка)
+# Скачать цепочку и ключ во временную папку
 yc certificate-manager certificate content \
   --id "$CERT_ID" \
-  --chain > /etc/nginx/ssl/radio-backend/fullchain.pem
+  --chain ~/fullchain.pem \
+  --key ~/privkey.pem
 
-# Скачайте приватный ключ
-yc certificate-manager certificate content \
-  --id "$CERT_ID" \
-  --private-key > /etc/nginx/ssl/radio-backend/privkey.pem
+# Переместить в /etc/apache2/ с правами root
+sudo mv ~/fullchain.pem /etc/apache2/ssl/radio-backend/fullchain.pem
+sudo mv ~/privkey.pem   /etc/apache2/ssl/radio-backend/privkey.pem
 
-# Установите безопасные права
-chmod 600 /etc/nginx/ssl/radio-backend/privkey.pem
-chmod 644 /etc/nginx/ssl/radio-backend/fullchain.pem
+# Установите права доступа
+sudo chmod 644 /etc/apache2/ssl/radio-backend/fullchain.pem
+sudo chmod 600 /etc/apache2/ssl/radio-backend/privkey.pem
+
+# Проверьте
+ls -la /etc/apache2/ssl/radio-backend/
 ```
 
-### Шаг 4 — Настройка Nginx для HTTPS
+---
 
-Обновите конфиг `/etc/nginx/sites-available/radio-backend`:
+## Шаг 8 — Настройка Apache для HTTPS
 
-```nginx
+Обновите `/etc/apache2/sites-available/radio-backend.conf`:
+
+```apache
 # HTTP → HTTPS редирект
-server {
-    listen 80;
-    server_name your-domain.com;
+<VirtualHost *:80>
+    ServerName your-domain.com
 
-    # ACME challenge (для продления сертификата)
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
+    # ACME-challenge (для обновления сертификата)
+    Alias /.well-known/acme-challenge/ /var/www/html/.well-known/acme-challenge/
+    <Directory "/var/www/html/.well-known/acme-challenge/">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
 
     # Редирект всего остального на HTTPS
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
 
 # HTTPS
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
+<VirtualHost *:443>
+    ServerName your-domain.com
 
     # Сертификат из Yandex Cloud Certificate Manager
-    ssl_certificate     /etc/nginx/ssl/radio-backend/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/radio-backend/privkey.pem;
+    SSLEngine on
+    SSLCertificateFile    /etc/apache2/ssl/radio-backend/fullchain.pem
+    SSLCertificateKeyFile /etc/apache2/ssl/radio-backend/privkey.pem
 
-    # Рекомендуемые SSL-настройки (Mozilla Modern)
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
+    # Рекомендуемые параметры TLS (Mozilla Modern)
+    SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
+    SSLCipherSuite          ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
+    SSLHonorCipherOrder     off
 
-    # HSTS (опционально, требует уверенности в долгосрочной поддержке HTTPS)
-    add_header Strict-Transport-Security "max-age=63072000" always;
+    # HSTS — браузер всегда использует HTTPS
+    Header always set Strict-Transport-Security "max-age=63072000"
 
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+    # Reverse proxy → Spring Boot
+    ProxyPreserveHost On
+    ProxyPass        / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Real-IP         %{REMOTE_ADDR}s
+
+    ErrorLog  ${APACHE_LOG_DIR}/radio-backend-ssl-error.log
+    CustomLog ${APACHE_LOG_DIR}/radio-backend-ssl-access.log combined
+</VirtualHost>
 ```
 
-Примените конфигурацию:
+Примените:
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
+sudo apache2ctl configtest
+sudo systemctl reload apache2
 ```
 
-### Шаг 5 — Открытие порта 443 в файрволе
+---
+
+## Шаг 9 — Открытие портов в Yandex Cloud
+
+### Файрвол на VM
 
 ```bash
-# UFW (Ubuntu)
+sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-
-# iptables
-sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+sudo ufw reload
+sudo ufw status
 ```
 
-Также убедитесь, что в **security group** Yandex Cloud (в веб-консоли) разрешён входящий TCP-трафик на порт 443.
+### Security Group в Yandex Cloud Console
 
-### Шаг 6 — Проверка
+В веб-консоли Yandex Cloud → **VPC** → **Security Groups** → группа вашей VM:
+
+| Направление | Протокол | Порт | Источник     |
+|-------------|----------|------|--------------|
+| Входящий    | TCP      | 80   | 0.0.0.0/0    |
+| Входящий    | TCP      | 443  | 0.0.0.0/0    |
+
+---
+
+## Шаг 10 — Проверка HTTPS
 
 ```bash
-# Проверьте HTTPS-соединение
-curl -v https://your-domain.com/api/city
+# Проверьте HTTPS
+curl https://your-domain.com/api/city
 
 # Проверьте редирект HTTP → HTTPS
 curl -I http://your-domain.com/api/city
-# Ожидается: 301 / 308 redirect на https://...
+# Ожидается: 301 Moved Permanently → https://...
 
-# Проверьте сертификат через openssl
+# Проверьте сертификат
 echo | openssl s_client -connect your-domain.com:443 -servername your-domain.com 2>/dev/null | \
   openssl x509 -noout -dates -subject
 ```
 
-### Автоматическое обновление сертификата
+---
 
-Сертификаты Let's Encrypt в Certificate Manager обновляются **автоматически** (Yandex Cloud сам проходит challenge и обновляет сертификат за ~30 дней до истечения). Однако **скачивание обновлённого сертификата на VM** нужно автоматизировать.
+## Обновление сертификата (раз в ~90 дней)
 
-Создайте скрипт `/usr/local/bin/update-radio-cert.sh`:
+Yandex Cloud Certificate Manager **автоматически обновляет** Let's Encrypt сертификат за ~30 дней до истечения срока. Однако файлы на VM нужно перекачивать вручную.
+
+Срок действия сертификата можно проверить:
+```bash
+echo | openssl s_client -connect mordva-calliope.ru:443 -servername mordva-calliope.ru 2>/dev/null | \
+  openssl x509 -noout -dates
+# notAfter — дата истечения
+```
+
+### Обновление через локальную машину
+
+Выполните **на локальной машине** (где работает `yc`):
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
+CERT_ID="fpq014rfs5rhu0c11pfc"
+VM_USER="yc-user"
+VM_HOST="89.169.182.128"
 
-CERT_ID="<ВАШ_CERT_ID>"
-SSL_DIR="/etc/nginx/ssl/radio-backend"
-
-# Проверяем, что сертификат выпущен
-STATUS=$(yc certificate-manager certificate get --id "$CERT_ID" --format json | jq -r '.status')
-if [ "$STATUS" != "ISSUED" ]; then
-    echo "Сертификат не в статусе ISSUED (текущий: $STATUS). Пропускаем."
-    exit 0
-fi
-
-# Скачиваем обновлённый сертификат
+# Скачать обновлённый сертификат
 yc certificate-manager certificate content \
   --id "$CERT_ID" \
-  --chain > "$SSL_DIR/fullchain.pem"
+  --chain ~/fullchain.pem \
+  --key ~/privkey.pem
 
-yc certificate-manager certificate content \
-  --id "$CERT_ID" \
-  --private-key > "$SSL_DIR/privkey.pem"
+# Скопировать на VM
+scp ~/fullchain.pem ${VM_USER}@${VM_HOST}:~/fullchain.pem
+scp ~/privkey.pem   ${VM_USER}@${VM_HOST}:~/privkey.pem
 
-chmod 600 "$SSL_DIR/privkey.pem"
-chmod 644 "$SSL_DIR/fullchain.pem"
+# Переместить в нужную директорию и перезагрузить Apache
+ssh ${VM_USER}@${VM_HOST} "
+  sudo mv ~/fullchain.pem /etc/apache2/ssl/radio-backend/fullchain.pem && \
+  sudo mv ~/privkey.pem   /etc/apache2/ssl/radio-backend/privkey.pem && \
+  sudo chmod 644 /etc/apache2/ssl/radio-backend/fullchain.pem && \
+  sudo chmod 600 /etc/apache2/ssl/radio-backend/privkey.pem && \
+  sudo apache2ctl configtest && sudo systemctl reload apache2 && \
+  echo 'Сертификат обновлён!'
+"
 
-# Перезагружаем Nginx
-nginx -t && systemctl reload nginx
-
-echo "[$(date)] Сертификат обновлён и Nginx перезагружен."
+# Удалите локальные копии
+rm ~/fullchain.pem ~/privkey.pem
 ```
 
-```bash
-sudo chmod +x /usr/local/bin/update-radio-cert.sh
-```
-
-Добавьте в cron (запуск раз в неделю):
-
-```bash
-# Откройте crontab root'а
-sudo crontab -e
-
-# Добавьте строку:
-0 4 * * 1 /usr/local/bin/update-radio-cert.sh >> /var/log/update-radio-cert.log 2>&1
-```
-
-> Скрипт скачивает сертификат каждую неделю в 04:00 понедельника. Если сертификат не изменился, Nginx просто перезагрузится с тем же файлом — это безопасно.
-
-### Альтернатива: Certbot (без Certificate Manager)
-
-Если вы предпочитаете **не использовать** Yandex Cloud Certificate Manager, можно установить Certbot напрямую на VM:
-
-```bash
-# Установка Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Получение сертификата (Certbot сам изменит конфиг Nginx)
-sudo certbot --nginx -d your-domain.com
-
-# Автоматическое продление уже настроено через systemd timer:
-sudo systemctl status certbot.timer
-```
-
-> **Плюс Certbot:** не нужен `yc` CLI, всё работает локально на VM.
-> **Плюс Certificate Manager:** централизованное управление сертификатами в облаке, интеграция с другими сервисами Yandex Cloud (ALB, CDN, API Gateway).
-
-### Устранение неполадок
-
-| Проблема | Решение |
-|----------|---------|
-| Сертификат застрял в `VALIDATING` | Проверьте что ACME-challenge файл доступен по `http://your-domain.com/.well-known/acme-challenge/<TOKEN>` |
-| `curl: (60) SSL certificate problem` | Убедитесь что скачан `fullchain.pem`, а не только `cert.pem` — нужен полный chain |
-| Nginx: `SSL: error:0B080074:x509 certificate routines:X509_check_private_key:key values mismatch` | Приватный ключ не соответствует сертификату — перескачайте оба файла заново |
-| `ERR_SSL_PROTOCOL_ERROR` в браузере | Проверьте что порт 443 открыт в файрволе и security group Yandex Cloud |
-| Сертификат истёк | Проверьте cron-задачу обновления: `sudo crontab -l` и лог `/var/log/update-radio-cert.log` |
+> **Когда обновлять:** установите напоминание за 2 недели до даты `notAfter`. Обычно это раз в 3 месяца.
 
 ---
 
-## Структура Docker-файлов
+## Доступные API эндпоинты
+
+| Метод | URL                                   | Описание                           |
+|-------|---------------------------------------|------------------------------------|
+| GET   | `/api/city`                           | Список городов (`?page=0&size=20`) |
+| GET   | `/api/city/{id}/radio-stations`       | Радиостанции города                |
+| GET   | `/api/city/search?name=...`           | Поиск городов по названию          |
+| GET   | `/api/radio-stations`                 | Все радиостанции                   |
+| GET   | `/api/radio-stations/{id}`            | Радиостанция по ID                 |
+| GET   | `/api/radio-stations/search?name=...` | Поиск радиостанций по названию     |
+
+---
+
+## Управление контейнером
+
+```bash
+docker compose ps              # статус
+docker compose logs -f app     # логи
+docker compose down            # остановить
+docker compose restart app     # перезапустить без пересборки
+docker compose up -d --build   # пересобрать после изменений кода
+```
+
+## Управление Apache
+
+```bash
+sudo apache2ctl configtest     # проверить конфигурацию
+sudo systemctl reload apache2  # перезагрузить конфиг
+sudo systemctl status apache2  # статус
+```
+
+---
+
+## Устранение неполадок
+
+| Проблема | Решение |
+|----------|---------|
+| `Connection refused` на порту 8080 | `docker compose ps` — контейнер должен быть `Up`. Логи: `docker compose logs app` |
+| `502 Bad Gateway` в Apache | Spring Boot не запущен или упал. `docker compose logs -f app` |
+| PostgreSQL недоступен | `sudo systemctl status postgresql`. Проверьте credentials в `.env` |
+| Сертификат застрял в `VALIDATING` | Проверьте доступность challenge: `curl http://your-domain.com/.well-known/acme-challenge/<TOKEN>`. A-запись домена должна вести на публичный IP VM |
+| `ERR_SSL_PROTOCOL_ERROR` | Порт 443 закрыт в UFW или Security Group Yandex Cloud |
+| `SSL: key values mismatch` в Apache | Несоответствие ключа и сертификата — перескачайте оба файла заново |
+| Сертификат истёк | Проверьте лог: `cat /var/log/update-radio-cert.log`. Запустите скрипт вручную: `sudo /usr/local/bin/update-radio-cert.sh` |
+| Apache: `AH00526: Premature end of script` | `sudo apache2ctl configtest` — исправьте синтаксическую ошибку в конфиге |
+
+---
+
+## Структура файлов проекта
 
 ```
 backend_radio/
-├── Dockerfile              # Многоэтапная сборка (Gradle → JRE)
-├── docker-compose.yml      # Только Spring Boot (БД уже на VM)
-├── .dockerignore            # Исключения для Docker-контекста
+├── Dockerfile              # Многоэтапная сборка (Gradle → JRE 21)
+├── docker-compose.yml      # Запуск Spring Boot (network_mode: host)
+├── .dockerignore           # Исключения для Docker-контекста
 ├── .env.example            # Шаблон переменных окружения
 └── DEPLOY.md               # Эта инструкция
 ```
