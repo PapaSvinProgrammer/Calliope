@@ -3,6 +3,7 @@ package com.mordva.network.provider
 import com.mordva.network.BuildConfig
 import com.mordva.network.interceptor.OAuthInterceptor
 import com.mordva.network.interceptor.RetryInterceptor
+import com.mordva.network.interceptor.SSLErrorHandleInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
@@ -10,6 +11,7 @@ object OkHttpClientProvider {
     private val oauthTokenProvider by lazy { OauthTokenProvider() }
     private val client by lazy { createOkHttpClient() }
 
+    private val sslErrorHandleInterceptor by lazy { SSLErrorHandleInterceptor() }
     private val httpLoggingInterceptor by lazy { createHttpLoggingInterceptor() }
     private val oauthInterceptor by lazy { OAuthInterceptor(oauthTokenProvider) }
     private val retryInterceptor by lazy { RetryInterceptor(oauthTokenProvider) }
@@ -18,6 +20,7 @@ object OkHttpClientProvider {
 
     private fun createOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(sslErrorHandleInterceptor)
             .addInterceptor(oauthInterceptor)
             .addInterceptor(retryInterceptor)
             .addInterceptor(httpLoggingInterceptor)

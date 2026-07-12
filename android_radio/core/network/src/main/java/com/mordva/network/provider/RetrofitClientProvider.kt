@@ -15,6 +15,7 @@ object RetrofitClientProvider {
         val kotlinxConverterFactory = Json.asConverterFactory(contentType)
 
         return Retrofit.Builder()
+            .baseUrl("https://mordva-calliope.ru/api/")
             .addConverterFactory(kotlinxConverterFactory)
             .client(OkHttpClientProvider.provide())
             .build()

@@ -1,18 +1,32 @@
 package com.mordva.feature.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.mordva.domain.domain.repository.CityRepository
+import com.mordva.domain.domain.repository.RadioStationRepository
 import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenCityState
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlin.collections.listOf
 
-internal class HomeViewModel : ViewModel() {
+internal class HomeViewModel(
+    private val cityRepository: CityRepository,
+    private val radioStationRepository: RadioStationRepository,
+) : ViewModel() {
     private val isPlayRadioState = MutableStateFlow(false)
     private val state = MutableStateFlow(false)
+
+    init {
+        GlobalScope.launch {
+            Log.d("RRRR", cityRepository.getAll().toString())
+        }
+    }
 
     val uiState: Flow<HomeScreenState> = combine(
         isPlayRadioState,
