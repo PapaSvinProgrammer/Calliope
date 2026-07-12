@@ -36,11 +36,40 @@
 ┌─────────────────────┴────────────┐
 │  city                             │
 ├──────────────────────────────────┤
-│ id     SERIAL PK                 │
-│ name   VARCHAR(500) UNIQUE       │
-│ region VARCHAR(500)               │
-└──────────────────────────────────┘
+│ id              SERIAL PK        │
+│ name            VARCHAR(500)     │
+│                  UNIQUE          │
+│ region          VARCHAR(500)     │
+│ city_image_id   INTEGER FK →     │
+│                  city_image(id)  │
+│ region_image_id INTEGER FK →     │
+│                  region_image(id)│
+└──────┬───────────────┬───────────┘
+       │               │
+       ▼               ▼
+┌──────────────────┐  ┌──────────────────┐
+│  city_image      │  │  region_image    │
+├──────────────────┤  ├──────────────────┤
+│ id          SERIAL│  │ id          SERIAL│
+│              PK   │  │              PK   │
+│ imageurl    TEXT  │  │ imageurl    TEXT  │
+│ downloadurl TEXT  │  │ downloadurl TEXT  │
+│ source      TEXT  │  │ source      TEXT  │
+└──────────────────┘  └──────────────────┘
 ```
+
+### Описание таблиц
+
+| Таблица | Назначение |
+|---|---|
+| `radio_station` | Радиостанции (название, описание, логотип, поток) |
+| `city` | Города вещания с привязкой к региону |
+| `city_image` | Гербы городов (imageurl, downloadurl, source-страница) |
+| `region_image` | Флаги/гербы регионов (imageurl, downloadurl, source-страница) |
+| `radio_station_city` | Связь «многие-ко-многим» между станциями и городами |
+
+Колонки `city.city_image_id` и `city.region_image_id` ссылаются на
+`city_image(id)` и `region_image(id)` соответственно (`ON DELETE SET NULL`).
 
 ## Логика выбора streamUrl
 
@@ -63,17 +92,21 @@ pip install requests psycopg2-binary
 
 ## Настройка
 
-Отредактируйте `DB_CONFIG` в `scraper.py`:
+Отредактируйте `DB_CONFIG` в [`db.py`](db.py:15):
 
 ```python
 DB_CONFIG = {
-    "host": "158.160.179.250",
+    "host": "89.169.182.128",
     "port": 5432,
     "dbname": "radio_db",
     "user": "postgres",
     "password": "OFqBiZ2-LP",
+    "gssencmode": "disable",  # отключает GSSAPI (нужен, если нет krb5-конфига)
 }
 ```
+
+> База данных `radio_db` создаётся автоматически при первом запуске —
+> скрипт подключается к служебной БД `postgres` и выполняет `CREATE DATABASE`.
 
 ## Запуск
 
@@ -134,9 +167,15 @@ ORDER BY name;
 
 ```
 rosradio_scraper/
-├── scraper.py    — основной скрипт скрапинга
-├── venv/         — виртуальное окружение Python
-└── README.md     — документация
+├── scraper.py            — основной скрипт скрапинга
+├── db.py                 — работа с PostgreSQL (схема, миграции, CRUD)
+├── image_search.py       — поиск логотипов станций через Yandex Images
+├── description_search.py — поиск описаний станций
+├── cities.json           — справочник городов с координатами
+├── regions.json          — справочник регионов
+├── test_image_search.py  — тесты для image_search
+├── venv/                 — виртуальное окружение Python
+└── README.md             — документация
 ```
 
 ## Источник данных
