@@ -6,4 +6,6 @@
     <dimen name="home_radio_image_size">150dp</dimen>
     <dimen name="progress_bar_shimmer_height">50dp</dimen>
     <dimen name="top_bar_height">64dp</dimen>
+    <dimen name="radio_pager_lift_on_press">24dp</dimen>
+    <dimen name="radio_pager_drag_target_offset_y">260dp</dimen>
 </resources>

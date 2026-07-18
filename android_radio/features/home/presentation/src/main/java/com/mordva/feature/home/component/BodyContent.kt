@@ -85,7 +85,7 @@ private fun HomeImageContent(
 
                 is HomeScreenRadioState.Success -> {
                     RenderHomeImageContent(
-                        imageUrl = radioState.imageUrl,
+                        imageUrl = radioState.station.imageUrl,
                         isExpanded = isExpanded,
                         onPlayClick = onPlayClick,
                     )

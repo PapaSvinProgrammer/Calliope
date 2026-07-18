@@ -88,7 +88,7 @@ private fun RowScope.RenderCustomProgressBar(
             CustomProgressBar(
                 currentValue = state.currentValue,
                 maxValue = state.maxValue,
-                title = state.title,
+                title = state.station.title,
                 modifier = Modifier.weight(1f),
             )
         }
