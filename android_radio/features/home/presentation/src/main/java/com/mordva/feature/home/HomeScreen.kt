@@ -53,7 +53,6 @@ internal fun HomeScreen(
         }
     }
 
-
     Scaffold(
         topBar = { HomeTopBar(uiState.cityState) },
     ) { innerPadding ->

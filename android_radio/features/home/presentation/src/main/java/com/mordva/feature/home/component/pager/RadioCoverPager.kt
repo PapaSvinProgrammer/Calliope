@@ -1,7 +1,6 @@
 package com.mordva.feature.home.component.pager
 
 import androidx.compose.foundation.gestures.snapping.SnapPosition
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,16 +60,15 @@ internal fun RadioCoverPager(
                 }
 
                 is HomeScreenRadioState.Success -> {
-                    Box(modifier = Modifier.radioItemParams(pageOffset)) {
-                        RadioPagerItem(
-                            id = item.station.id,
-                            imageUrl = item.station.imageUrl,
-                            title = item.station.title,
-                            pageOffset = pageOffset,
-                            onClick = { onClickPagerItem(page) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    RadioPagerItem(
+                        id = item.station.id,
+                        imageUrl = item.station.imageUrl,
+                        title = item.station.title,
+                        isSelected = item.isSelected,
+                        pageOffset = pageOffset,
+                        onClick = { onClickPagerItem(page) },
+                        modifier = Modifier.radioItemParams(pageOffset),
+                    )
                 }
             }
         }

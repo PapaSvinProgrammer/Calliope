@@ -5,7 +5,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,8 +40,6 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.util.lerp
 import coil3.compose.AsyncImage
 import com.mordva.system_ui.Resources
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 @Composable
@@ -51,12 +48,10 @@ internal fun RadioPagerItem(
     imageUrl: String,
     title: String,
     pageOffset: Float,
+    isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scope = rememberCoroutineScope()
-    val dragParams = rememberRadioPagerDragParams()
-
     val absoluteOffset = pageOffset.absoluteValue.coerceIn(0f, 1f)
     val centerProgress = 1f - absoluteOffset
 
@@ -64,6 +59,24 @@ internal fun RadioPagerItem(
     val borderWidth = lerp(Resources.Dimens.ZERO, Resources.Dimens.DP2, centerProgress)
 
     val dynamicBorderProgress = remember(id) { Animatable(0f) }
+
+    LaunchedEffect(isSelected) {
+        if (isSelected) {
+            dynamicBorderProgress.snapTo(0f)
+            dynamicBorderProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 1000,
+                    easing = LinearEasing,
+                ),
+            )
+        } else {
+            dynamicBorderProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 800),
+            )
+        }
+    }
 
     RadioPagerItemContent(
         imageUrl = imageUrl,
@@ -77,54 +90,6 @@ internal fun RadioPagerItem(
                 interactionSource = null,
                 onClick = onClick,
             )
-            .verticalLongPressDrag(
-                dynamicBorderProgress = dynamicBorderProgress,
-                borderFillDurationMillis = dragParams.borderFillDurationMillis,
-                dragEndBorderDurationMillis = dragParams.dragEndBorderDurationMillis,
-                dragCancelBorderDurationMillis = dragParams.dragCancelBorderDurationMillis,
-                scope = scope,
-            ),
-    )
-}
-
-private fun Modifier.verticalLongPressDrag(
-    dynamicBorderProgress: Animatable<Float, *>,
-    borderFillDurationMillis: Int,
-    dragEndBorderDurationMillis: Int,
-    dragCancelBorderDurationMillis: Int,
-    scope: CoroutineScope,
-): Modifier = pointerInput(Unit) {
-    detectDragGesturesAfterLongPress(
-        onDragStart = {
-            scope.launch {
-                dynamicBorderProgress.snapTo(0f)
-                dynamicBorderProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = borderFillDurationMillis,
-                        easing = LinearEasing,
-                    ),
-                )
-            }
-        },
-        onDrag = { _, _ -> },
-        onDragEnd = {
-            scope.launch {
-                dynamicBorderProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(durationMillis = dragEndBorderDurationMillis),
-                )
-
-            }
-        },
-        onDragCancel = {
-            scope.launch {
-                dynamicBorderProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(durationMillis = dragCancelBorderDurationMillis),
-                )
-            }
-        },
     )
 }
 

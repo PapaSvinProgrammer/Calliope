@@ -9,6 +9,7 @@ import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,17 +57,34 @@ internal class HomeViewModel(
     private fun handleSelectedPagerItem(selectedIndex: Int) {
         currentPagerIndex.value = selectedIndex
         sendEvent(HomeScreenEvent.MovePager(selectedIndex))
-        updateCurrentRadioStation()
+        updateCurrentRadioStation(selectedIndex)
+        updateSelectedStation(selectedIndex)
     }
 
-    private fun updateCurrentRadioStation() {
-        val stationState = recommendationStationsState.value.getOrNull(currentPagerIndex.value)
+    private fun updateCurrentRadioStation(selectedIndex: Int) {
+        val stationState = recommendationStationsState.value.getOrNull(selectedIndex)
 
         if (stationState is HomeScreenRadioState.Success) {
             currentStationState.value = stationState
         } else {
             sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
         }
+    }
+
+    private fun updateSelectedStation(
+        selectedIndex: Int
+    ) = viewModelScope.launch(Dispatchers.Default) {
+        val newList = recommendationStationsState.value.mapIndexed { index, item ->
+            if (item is HomeScreenRadioState.Success) {
+                item.copy(
+                    isSelected = index == selectedIndex
+                )
+            } else {
+                item
+            }
+        }
+
+        recommendationStationsState.value = newList
     }
 
     private fun togglePlayRadio() {
@@ -101,9 +119,8 @@ internal class HomeViewModel(
         loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
             val contentItems = stations.map { HomeScreenRadioState.Success(station = it) }
 
-            recommendationStationsState.value = recommendationStationsState
-                .value
-                .dropLast(DEFAULT_LOADING_PAGER_SIZE) + contentItems
+            recommendationStationsState.value =
+                recommendationStationsState.value.dropLast(DEFAULT_LOADING_PAGER_SIZE) + contentItems
 
             isPagerLoadMore.value = false
         }

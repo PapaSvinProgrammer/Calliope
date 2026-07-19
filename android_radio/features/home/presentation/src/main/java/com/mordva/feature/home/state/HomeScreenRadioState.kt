@@ -10,6 +10,7 @@ internal sealed interface HomeScreenRadioState {
     data class Success(
         val maxValue: Float = 0f,
         val currentValue: Float = 0f,
+        val isSelected: Boolean = false,
         val station: RadioStation,
     ) : HomeScreenRadioState
 }
