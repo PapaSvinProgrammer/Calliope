@@ -3,6 +3,7 @@ package com.mordva.feature.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mordva.domain.domain.model.RadioStation
 import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
@@ -22,7 +23,6 @@ import kotlinx.coroutines.launch
 internal class HomeViewModel(
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
 ) : ViewModel() {
-    private val currentPagerIndex = MutableStateFlow(0)
     private val currentStationState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
     private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
     private val isPlayRadioState = MutableStateFlow(false)
@@ -60,10 +60,8 @@ internal class HomeViewModel(
     }
 
     private fun handleSelectedPagerItem(selectedIndex: Int) {
-        currentPagerIndex.value = selectedIndex
         sendEvent(HomeScreenEvent.MovePager(selectedIndex))
         updateCurrentRadioStation(selectedIndex)
-        updateSelectedStation(selectedIndex)
     }
 
     private fun updateCurrentRadioStation(selectedIndex: Int) {
@@ -74,20 +72,6 @@ internal class HomeViewModel(
         } else {
             sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
         }
-    }
-
-    private fun updateSelectedStation(selectedIndex: Int) {
-        val newList = recommendationStationsState.value.mapIndexed { index, item ->
-            if (item is HomeScreenRadioState.Success) {
-                item.copy(
-                    isSelected = index == selectedIndex
-                )
-            } else {
-                item
-            }
-        }
-
-        recommendationStationsState.update { newList }
     }
 
     private fun togglePlayRadio() {
@@ -113,16 +97,34 @@ internal class HomeViewModel(
         if (loadMoreJob?.isActive == true) return
 
         Log.d(TAG, "loadRadioStation()")
-        recommendationStationsState.update { it + HomeScreenRadioState.Loading }
+        showLoadMoreLoading()
 
         loadMoreJob = viewModelScope.launch {
-            loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
-                val newItems = stations.map { HomeScreenRadioState.Success(station = it) }
-
-                recommendationStationsState.update { current ->
-                    current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
+            loadRadioStationsUseCase
+                .execute(DEFAULT_PAGER_SIZE)
+                .onSuccess { stations ->
+                    appendLoadedStations(stations)
                 }
-            }
+                .onFailure {
+                    hideLoadMoreLoading()
+                    sendEvent(HomeScreenEvent.ShowLoadMoreErrorMessage)
+                }
+        }
+    }
+
+    private fun showLoadMoreLoading() {
+        recommendationStationsState.update { it + HomeScreenRadioState.Loading }
+    }
+
+    private fun hideLoadMoreLoading() {
+        recommendationStationsState.update { it.dropLast(DEFAULT_LOADING_PAGER_SIZE) }
+    }
+
+    private fun appendLoadedStations(stations: List<RadioStation>) {
+        val newItems = stations.map { HomeScreenRadioState.Success(station = it) }
+
+        recommendationStationsState.update { current ->
+            current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
         }
     }
 

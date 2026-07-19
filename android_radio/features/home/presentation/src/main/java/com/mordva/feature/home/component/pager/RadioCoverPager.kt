@@ -20,6 +20,7 @@ import kotlin.math.absoluteValue
 @Composable
 internal fun RadioCoverPager(
     pagerState: PagerState,
+    selectedId: Int?,
     items: List<HomeScreenRadioState>,
     onClickPagerItem: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -64,7 +65,7 @@ internal fun RadioCoverPager(
                         id = item.station.id,
                         imageUrl = item.station.imageUrl,
                         title = item.station.title,
-                        isSelected = item.isSelected,
+                        isSelected = selectedId == item.station.id,
                         pageOffset = pageOffset,
                         onClick = { onClickPagerItem(page) },
                         modifier = Modifier.radioItemParams(pageOffset),

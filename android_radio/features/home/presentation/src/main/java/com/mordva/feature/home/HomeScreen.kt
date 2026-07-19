@@ -20,6 +20,7 @@ import com.mordva.feature.home.component.topbar.HomeTopBar
 import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenState
+import com.mordva.feature.home.state.getStationId
 import com.mordva.system_ui.CollectWithLifecycle
 import com.mordva.system_ui.composition_local.LocalSnackbarHostState
 
@@ -42,6 +43,8 @@ internal fun HomeScreen(
             HomeScreenEvent.ShowSelectStationErrorMessage -> {
                 snackbarHostState.showSnackbar(errorMessageSelectRadioStation)
             }
+
+            HomeScreenEvent.ShowLoadMoreErrorMessage -> TODO()
         }
     }
 
@@ -70,6 +73,7 @@ internal fun HomeScreen(
             RadioCoverPager(
                 items = uiState.recommendationStations,
                 pagerState = pagerState,
+                selectedId = uiState.radioState.getStationId(),
                 onClickPagerItem = { viewModel.onActionHandle(HomeScreenAction.OnPagerItemClick(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
