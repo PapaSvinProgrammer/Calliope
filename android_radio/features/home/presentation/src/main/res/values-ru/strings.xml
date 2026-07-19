@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="error_progress_bar_title">Не удалось запустить станцию</string>
+    <string name="error_message_selected_radio_station">Нельзя выбрать не загруженный контент</string>
 </resources>

@@ -9,8 +9,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,6 +29,7 @@ import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
 import com.mordva.radio.presentation.theme.AppTheme
 import com.mordva.system_ui.Resources
+import com.mordva.system_ui.composition_local.LocalSnackbarHostState
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -55,32 +60,39 @@ private fun ComposeRadioApp(
     viewModel: MainViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle(MainUiState())
-    val backStack = rememberNavBackStack(Router.startDestination)
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            ControlBottomBar(
-                searchExpanded = uiState.searchExpanded,
-                searchText = uiState.searchText,
-                selectedItem = uiState.selectedItem,
-                action = { viewModel.action(it) },
-                modifier = Modifier.padding(Resources.Dimens.DP10),
+    val backStack = rememberNavBackStack(Router.startDestination)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    CompositionLocalProvider(
+        LocalSnackbarHostState provides snackbarHostState,
+    ) {
+        Scaffold(
+            bottomBar = {
+                ControlBottomBar(
+                    searchExpanded = uiState.searchExpanded,
+                    searchText = uiState.searchText,
+                    selectedItem = uiState.selectedItem,
+                    action = { viewModel.action(it) },
+                    modifier = Modifier.padding(Resources.Dimens.DP10),
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            modifier = Modifier.fillMaxSize(),
+        ) { innerPadding ->
+            NavDisplay(
+                backStack = backStack,
+                modifier = Modifier.fillMaxSize(),
+                entryProvider = { route ->
+                    when (route) {
+                        is HomeRoute -> NavEntry(route) {
+                            HomeScreenProvider()
+                        }
+
+                        else -> NavEntry(route) {}
+                    }
+                },
             )
         }
-    ) { innerPadding ->
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier.fillMaxSize(),
-            entryProvider = { route ->
-                when (route) {
-                    is HomeRoute -> NavEntry(route) {
-                        HomeScreenProvider()
-                    }
-
-                    else -> NavEntry(route) {}
-                }
-            },
-        )
     }
 }

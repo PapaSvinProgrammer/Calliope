@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mordva.domain.domain.repository.CityRepository
-import com.mordva.domain.domain.repository.RadioStationRepository
+import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
@@ -18,8 +18,12 @@ import kotlinx.coroutines.launch
 
 internal class HomeViewModel(
     private val cityRepository: CityRepository,
-    private val radioStationRepository: RadioStationRepository,
+    private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
 ) : ViewModel() {
+    private val isPagerLoadMore = MutableStateFlow(false)
+
+    private val currentPagerIndex = MutableStateFlow(0)
+    private val currentStationState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
     private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
     private val isPlayRadioState = MutableStateFlow(false)
 
@@ -33,8 +37,10 @@ internal class HomeViewModel(
     val uiState: Flow<HomeScreenState> = combine(
         isPlayRadioState,
         recommendationStationsState,
-    ) { isPlayRadio, recommendationStations ->
+        currentStationState,
+    ) { isPlayRadio, recommendationStations, currentStation ->
         HomeScreenState(
+            radioState = currentStation,
             recommendationStations = recommendationStations,
             isPlayRadio = isPlayRadio,
         )
@@ -44,10 +50,23 @@ internal class HomeViewModel(
         HomeScreenAction.OnPlayClick -> togglePlayRadio()
         HomeScreenAction.OnSearchClick -> TODO()
         is HomeScreenAction.OnPagerItemClick -> handleSelectedPagerItem(action.page)
+        is HomeScreenAction.OnPagerEnded -> loadMoreRadioStation()
     }
 
     private fun handleSelectedPagerItem(selectedIndex: Int) {
+        currentPagerIndex.value = selectedIndex
         sendEvent(HomeScreenEvent.MovePager(selectedIndex))
+        updateCurrentRadioStation()
+    }
+
+    private fun updateCurrentRadioStation() {
+        val stationState = recommendationStationsState.value.getOrNull(currentPagerIndex.value)
+
+        if (stationState is HomeScreenRadioState.Success) {
+            currentStationState.value = stationState
+        } else {
+            sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
+        }
     }
 
     private fun togglePlayRadio() {
@@ -62,14 +81,37 @@ internal class HomeViewModel(
     private fun getRecommendationStations() = viewModelScope.launch {
         Log.d(TAG, "getRecommendationStations()")
 
-        radioStationRepository.getAll().onSuccess { stations ->
+        loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
             recommendationStationsState.value = stations.map {
                 HomeScreenRadioState.Success(station = it)
             }
         }
     }
 
+    private fun loadMoreRadioStation() = viewModelScope.launch {
+        if (isPagerLoadMore.value) return@launch
+        isPagerLoadMore.value = true
+
+        Log.d(TAG, "loadRadioStation()")
+
+        recommendationStationsState.value += List(DEFAULT_LOADING_PAGER_SIZE) {
+            HomeScreenRadioState.Loading
+        }
+
+        loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
+            val contentItems = stations.map { HomeScreenRadioState.Success(station = it) }
+
+            recommendationStationsState.value = recommendationStationsState
+                .value
+                .dropLast(DEFAULT_LOADING_PAGER_SIZE) + contentItems
+
+            isPagerLoadMore.value = false
+        }
+    }
+
     private companion object {
         const val TAG = "HomeViewModel"
+        const val DEFAULT_PAGER_SIZE = 10
+        const val DEFAULT_LOADING_PAGER_SIZE = 1
     }
 }
