@@ -23,6 +23,8 @@ android {
 dependencies {
     api(libs.retrofit)
     api(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.logging.interceptor)
+    implementation(projects.core.datastore.api)
 }

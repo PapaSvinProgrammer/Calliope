@@ -1,13 +1,22 @@
 package com.mordva.network.provider
 
-import java.util.concurrent.atomic.AtomicReference
+import com.mordva.datastore.api.repository.TokenPreferencesRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CoroutineScope
 
-internal class OauthTokenProvider {
-    private val token = AtomicReference("")
-
-    fun provide(): String = token.get()
-
-    fun update() {
-        token.set("")
-    }
+class OauthTokenProvider(
+    tokenPreferencesRepository: TokenPreferencesRepository,
+    coroutineScope: CoroutineScope,
+) {
+    val token: StateFlow<String> = tokenPreferencesRepository
+        .get()
+        .map { it.orEmpty() }
+        .stateIn(
+            scope = coroutineScope,
+            started = SharingStarted.Eagerly,
+            initialValue = "",
+        )
 }

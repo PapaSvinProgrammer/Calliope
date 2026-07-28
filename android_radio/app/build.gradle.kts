@@ -31,6 +31,10 @@ dependencies {
     implementation(projects.features.home.presentation)
     implementation(projects.features.home.domain)
     implementation(projects.features.controlBar)
+    implementation(projects.core.datastore.api)
+    implementation(projects.core.datastore.impl)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore)
 }

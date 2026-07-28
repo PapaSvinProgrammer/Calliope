@@ -12,7 +12,7 @@ internal class OAuthInterceptor(
 
         request = request.newBuilder()
             .addHeader(CONTENT_TYPE, "application/json")
-            .addHeader(OAUTH, oauthTokenProvider.provide())
+            .addHeader(OAUTH, oauthTokenProvider.token.value)
             .build()
 
         return chain.proceed(request)
