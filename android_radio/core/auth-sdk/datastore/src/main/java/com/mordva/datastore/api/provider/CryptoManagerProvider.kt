@@ -1,8 +1,8 @@
-package com.mordva.datastore.impl.provider
+package com.mordva.datastore.api.provider
 
 import android.content.Context
-import com.mordva.datastore.api.manager.CryptoManager
-import com.mordva.datastore.impl.manager.TinkCryptoManager
+import com.mordva.datastore.api.CryptoManager
+import com.mordva.datastore.impl.TinkCryptoManager
 
 object CryptoManagerProvider {
     fun provider(context: Context): CryptoManager {

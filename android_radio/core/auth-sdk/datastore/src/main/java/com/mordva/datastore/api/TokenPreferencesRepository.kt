@@ -1,4 +1,4 @@
-package com.mordva.datastore.api.repository
+package com.mordva.datastore.api
 
 import kotlinx.coroutines.flow.Flow
 

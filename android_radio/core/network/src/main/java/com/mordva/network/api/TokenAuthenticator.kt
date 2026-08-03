@@ -1,16 +1,14 @@
 package com.mordva.network.api
 
-import com.mordva.network.provider.OauthTokenProvider
-import com.mordva.network.repository.AuthRepository
+import com.mordva.sdk.api.AuthSdk
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 
-class TokenAuthenticator(
-    private val authRepository: AuthRepository,
-    private val oauthTokenProvider: OauthTokenProvider,
+internal class TokenAuthenticator(
+    private val authSdk: AuthSdk,
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
@@ -18,12 +16,13 @@ class TokenAuthenticator(
             return null
         }
 
-        val refreshResult = runBlocking { authRepository.refreshToken() }
+        val refreshResult = runBlocking { authSdk.refreshToken() }
+
         if (refreshResult.isFailure) {
             return null
         }
 
-        val newToken = oauthTokenProvider.token.value
+        val newToken = runBlocking { authSdk.getToken() }.getOrNull().orEmpty()
 
         return response.request.newBuilder()
             .header(OAUTH, newToken)

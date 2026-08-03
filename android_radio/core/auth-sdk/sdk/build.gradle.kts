@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.mordva.network"
+    namespace = "com.mordva.auth_sdk"
 
     buildTypes {
         release {
@@ -21,10 +21,11 @@ android {
 }
 
 dependencies {
-    api(libs.retrofit)
-    api(libs.kotlinx.serialization.json)
-    api(libs.kotlinx.coroutines.core)
+    implementation(libs.retrofit)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.logging.interceptor)
-    implementation(projects.core.authSdk.sdk)
+    implementation(libs.tink.android)
+    implementation(projects.core.authSdk.datastore)
 }

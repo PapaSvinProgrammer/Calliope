@@ -33,6 +33,8 @@ dependencies {
     implementation(projects.features.controlBar)
     implementation(projects.core.datastore.api)
     implementation(projects.core.datastore.impl)
+    implementation(projects.core.authSdk.datastore)
+    implementation(projects.core.authSdk.sdk)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.androidx.datastore.preferences)

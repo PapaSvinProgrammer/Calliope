@@ -1,4 +1,4 @@
-package com.mordva.datastore.api.datastore
+package com.mordva.datastore.api
 
 import android.content.Context
 import androidx.datastore.core.DataStore

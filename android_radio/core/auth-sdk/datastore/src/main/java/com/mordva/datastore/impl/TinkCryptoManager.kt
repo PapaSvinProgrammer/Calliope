@@ -1,4 +1,4 @@
-package com.mordva.datastore.impl.manager
+package com.mordva.datastore.impl
 
 import android.content.Context
 import android.util.Base64
@@ -9,7 +9,7 @@ import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.aead.PredefinedAeadParameters
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
-import com.mordva.datastore.api.manager.CryptoManager
+import com.mordva.datastore.api.CryptoManager
 
 internal class TinkCryptoManager(context: Context) : CryptoManager {
     init {

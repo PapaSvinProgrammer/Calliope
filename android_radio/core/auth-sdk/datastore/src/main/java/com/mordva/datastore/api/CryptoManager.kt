@@ -1,4 +1,4 @@
-package com.mordva.datastore.api.manager
+package com.mordva.datastore.api
 
 interface CryptoManager {
     fun encrypt(plainText: String): String

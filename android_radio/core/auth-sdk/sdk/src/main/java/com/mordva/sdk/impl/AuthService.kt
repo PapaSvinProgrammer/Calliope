@@ -1,10 +1,10 @@
-package com.mordva.network.api
+package com.mordva.sdk.impl
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
 
-interface AuthService {
+internal interface AuthService {
     @GET("auth/token")
     suspend fun fetchToken(): TokenResponse
 }

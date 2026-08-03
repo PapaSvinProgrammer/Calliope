@@ -1,6 +1,9 @@
 package com.mordva.radio.di
 
 import com.mordva.radio.domain.MainViewModel
+import com.mordva.sdk.api.AuthSdk
+import com.mordva.sdk.api.AuthSdkConfig
+import com.mordva.sdk.api.AuthSdkProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,6 +16,15 @@ const val DEFAULT_SCOPE = "DEFAULT_COROUTINE_SCOPE"
 
 val appModule = module {
     viewModelOf(::MainViewModel)
+
+    single<AuthSdk> {
+        val config = AuthSdkConfig(
+            context = get(),
+            apiUrl = "https://mordva-calliope.ru/api/",
+        )
+
+        AuthSdkProvider.provide(config)
+    }
 }
 
 val coroutineModule = module {
