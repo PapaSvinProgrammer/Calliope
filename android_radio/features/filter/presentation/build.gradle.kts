@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.mordva.location.presentation"
+    namespace = "com.mordva.filter.presentation"
 }
 
 dependencies {

@@ -14,8 +14,8 @@ import com.mordva.presentation.state.LocationCityState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SuccessContent(
-    currentCityId: Int?,
+internal fun LocationSuccessContent(
+    selectedCityIds: Set<Int>,
     cityListState: LocationCityState.Success,
     lazyListState: LazyListState,
     onItemClick: (City) -> Unit,
@@ -32,7 +32,7 @@ internal fun SuccessContent(
                 LocationListItem(
                     title = city.title,
                     images = city.getAvailableImages(),
-                    isSelected = city.id == currentCityId,
+                    isSelected = city.id in selectedCityIds,
                     onClick = { onItemClick(city) },
                 )
             }

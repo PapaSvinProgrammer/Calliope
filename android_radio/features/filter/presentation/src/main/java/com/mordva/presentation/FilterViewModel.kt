@@ -3,17 +3,19 @@ package com.mordva.presentation
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mordva.datastore.api.model.CityData
 import com.mordva.datastore.api.repository.CityPreferencesRepository
 import com.mordva.domain.location.domain.model.City
 import com.mordva.domain.location.domain.usecase.LoadCityUseCase
 import com.mordva.domain.location.domain.usecase.SearchCityUseCase
 import com.mordva.presentation.state.FilterAction
-import com.mordva.presentation.state.LocationCityState
 import com.mordva.presentation.state.FilterEvent
+import com.mordva.presentation.state.FilterType
 import com.mordva.presentation.state.FilterUiState
+import com.mordva.presentation.state.LocationCityState
 import com.mordva.presentation.state.getItems
-import com.mordva.presentation.utils.toData
 import com.mordva.presentation.utils.toUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -32,7 +34,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class FilterViewModel(
-    private val cityPreferencesRepository: CityPreferencesRepository,
+    cityPreferencesRepository: CityPreferencesRepository,
     private val loadCityUseCase: LoadCityUseCase,
     private val searchCityUseCase: SearchCityUseCase,
 ) : ViewModel() {
@@ -41,6 +43,9 @@ internal class FilterViewModel(
     private val searchCitiesState = MutableStateFlow<LocationCityState>(LocationCityState.Init)
     private val citiesState = MutableStateFlow<LocationCityState>(LocationCityState.Loading)
     private val searchTextState = MutableStateFlow("")
+    private val currentFilterType = MutableStateFlow<FilterType>(FilterType.Location)
+    private val selectedCitiesState = MutableStateFlow<List<City>>(emptyList())
+    private val selectedCategoriesState = MutableStateFlow<Set<String>>(emptySet())
 
     private val _uiEvent = Channel<FilterEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
@@ -50,11 +55,29 @@ internal class FilterViewModel(
         cityPreferencesRepository.get(),
         searchTextState,
         searchCitiesState,
-    ) { cities, currentCity, searchText, searchCities ->
+        currentFilterType,
+        selectedCitiesState,
+        selectedCategoriesState,
+    ) { values ->
+        val cities = values[0] as LocationCityState
+        val currentCity = values[1] as CityData
+        val searchText = values[2] as String
+        val searchCities = values[3] as LocationCityState
+        val filterType = values[4] as FilterType
+
+        @Suppress("UNCHECKED_CAST")
+        val selectedCities = values[5] as List<City>
+
+        @Suppress("UNCHECKED_CAST")
+        val selectedCategories = values[6] as Set<String>
+
         FilterUiState(
             searchText = searchText,
             cityListState = handleCitiesAndSearchCities(cities, searchCities),
             currentCity = currentCity.toUiState(),
+            selectedCities = selectedCities,
+            selectedCategories = selectedCategories,
+            filterType = filterType,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -69,7 +92,11 @@ internal class FilterViewModel(
 
     fun onActionHandle(action: FilterAction) = when (action) {
         FilterAction.OnListEnded -> loadMoreCities()
-        is FilterAction.OnItemClick -> saveSelectedCity(action.item)
+        FilterAction.OnApplyClick -> applyFiltersStub()
+        FilterAction.OnResetClick -> resetFilters()
+        is FilterAction.OnFilterTypeClick -> currentFilterType.value = action.type
+        is FilterAction.OnLocationClick -> toggleCity(action.item)
+        is FilterAction.OnCategoryClick -> toggleCategory(action.category)
         is FilterAction.OnSearchTextChanged -> updateSearchText(action.text)
     }
 
@@ -104,9 +131,37 @@ internal class FilterViewModel(
         }
     }
 
-    private fun saveSelectedCity(city: City) = viewModelScope.launch {
-        Log.d(TAG, "saveSelectedCity()")
-        cityPreferencesRepository.update(city.toData())
+    private fun toggleCity(city: City) = viewModelScope.launch(Dispatchers.Default) {
+        selectedCitiesState.update { selected ->
+            if (selected.any { it.id == city.id }) {
+                selected.filterNot { it.id == city.id }
+            } else {
+                selected + city
+            }
+        }
+    }
+
+    private fun toggleCategory(category: String) = viewModelScope.launch(Dispatchers.Default) {
+        selectedCategoriesState.update { selected ->
+            if (category in selected) {
+                selected - category
+            } else {
+                selected + category
+            }
+        }
+    }
+
+    private fun resetFilters() {
+        selectedCitiesState.value = emptyList()
+        selectedCategoriesState.value = emptySet()
+    }
+
+    private fun applyFiltersStub() {
+        Log.d(
+            TAG,
+            "applyFiltersStub(cities=${selectedCitiesState.value.map(City::id)}, " +
+                    "categories=${selectedCategoriesState.value})"
+        )
     }
 
     private fun searchCitiesByName(q: String) = viewModelScope.launch {

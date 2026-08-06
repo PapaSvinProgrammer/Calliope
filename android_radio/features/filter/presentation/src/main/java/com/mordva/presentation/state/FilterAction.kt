@@ -4,6 +4,10 @@ import com.mordva.domain.location.domain.model.City
 
 internal sealed interface FilterAction {
     data object OnListEnded : FilterAction
-    data class OnItemClick(val item: City) : FilterAction
+    data object OnApplyClick : FilterAction
+    data object OnResetClick : FilterAction
+    data class OnFilterTypeClick(val type: FilterType) : FilterAction
+    data class OnLocationClick(val item: City) : FilterAction
+    data class OnCategoryClick(val category: String) : FilterAction
     data class OnSearchTextChanged(val text: String) : FilterAction
 }

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.mordva.location.domain"
+    namespace = "com.mordva.filter.domain"
 }
 
 dependencies {
