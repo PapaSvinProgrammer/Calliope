@@ -26,7 +26,7 @@ import com.mordva.control_bar.ControlBottomBar
 import com.mordva.feature.home.HomeScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
-import com.mordva.presentation.LocationBottomSheetProvider
+import com.mordva.presentation.FilterBottomSheetProvider
 import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
 import com.mordva.radio.presentation.theme.AppTheme
@@ -102,7 +102,7 @@ private fun ComposeRadioApp(
         }
 
         when (uiState.currentSheet) {
-            AppSheet.Location -> LocationBottomSheetProvider(
+            AppSheet.Location -> FilterBottomSheetProvider(
                 onDismissRequest = { viewModel.updateSheetState(null) },
             )
 

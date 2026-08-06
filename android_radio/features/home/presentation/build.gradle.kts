@@ -9,4 +9,5 @@ android {
 dependencies {
     implementation(projects.features.home.domain)
     implementation(projects.core.datastore.api)
+    implementation(projects.core.player)
 }

@@ -11,6 +11,7 @@ import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
 import com.mordva.feature.home.utils.toUiState
+import com.mordva.player.api.PlaybackManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -25,9 +26,12 @@ import kotlinx.coroutines.launch
 internal class HomeViewModel(
     cityPreferencesRepository: CityPreferencesRepository,
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
-    private val currentStationState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
-    private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
+    private val currentStationState =
+        MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
+    private val recommendationStationsState =
+        MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
     private val isPlayRadioState = MutableStateFlow(false)
 
     private val _uiEvent = Channel<HomeScreenEvent>()
@@ -37,6 +41,7 @@ internal class HomeViewModel(
 
     init {
         getInitialRadioStations()
+        observePlaybackState()
     }
 
     val uiState: Flow<HomeScreenState> = combine(
@@ -80,7 +85,7 @@ internal class HomeViewModel(
     }
 
     private fun togglePlayRadio() {
-        isPlayRadioState.update { !it }
+        playbackManager.togglePlayPause()
     }
 
     private fun sendEvent(event: HomeScreenEvent) = viewModelScope.launch {
@@ -130,6 +135,12 @@ internal class HomeViewModel(
 
         recommendationStationsState.update { current ->
             current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
+        }
+    }
+
+    private fun observePlaybackState() = viewModelScope.launch {
+        playbackManager.state.collect {
+            Log.d(TAG, "observePlaybackState = $it")
         }
     }
 
