@@ -6,6 +6,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
 import com.mordva.feature.home.di.homeModules
+import com.mordva.presentation.di.locationModules
 import com.mordva.radio.di.appModule
 import com.mordva.radio.di.coroutineModule
 import com.mordva.radio.di.dataSoreModule
@@ -28,7 +29,7 @@ class RadioApp : Application(), SingletonImageLoader.Factory {
             )
 
             modules(
-                homeModules,
+                homeModules + locationModules
             )
         }
     }

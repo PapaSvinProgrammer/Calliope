@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -25,11 +26,14 @@ import com.mordva.control_bar.ControlBottomBar
 import com.mordva.feature.home.HomeScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
+import com.mordva.presentation.LocationBottomSheetProvider
 import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
 import com.mordva.radio.presentation.theme.AppTheme
 import com.mordva.system_ui.Resources
+import com.mordva.system_ui.composition_local.LocalSheetNavigator
 import com.mordva.system_ui.composition_local.LocalSnackbarHostState
+import com.mordva.system_ui.sheet.AppSheet
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -55,6 +59,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ComposeRadioApp(
     viewModel: MainViewModel = koinViewModel(),
@@ -66,6 +71,7 @@ private fun ComposeRadioApp(
 
     CompositionLocalProvider(
         LocalSnackbarHostState provides snackbarHostState,
+        LocalSheetNavigator provides { viewModel.updateSheetState(it) },
     ) {
         Scaffold(
             bottomBar = {
@@ -93,6 +99,14 @@ private fun ComposeRadioApp(
                     }
                 },
             )
+        }
+
+        when (uiState.currentSheet) {
+            AppSheet.Location -> LocationBottomSheetProvider(
+                onDismissRequest = { viewModel.updateSheetState(null) },
+            )
+
+            null -> Unit
         }
     }
 }

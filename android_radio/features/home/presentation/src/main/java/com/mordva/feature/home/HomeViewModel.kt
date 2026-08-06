@@ -10,6 +10,7 @@ import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
+import com.mordva.feature.home.utils.toUiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -22,8 +23,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class HomeViewModel(
+    cityPreferencesRepository: CityPreferencesRepository,
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
-    private val cityPreferencesRepository: CityPreferencesRepository,
 ) : ViewModel() {
     private val currentStationState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
     private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
@@ -42,11 +43,13 @@ internal class HomeViewModel(
         isPlayRadioState,
         recommendationStationsState,
         currentStationState,
-    ) { isPlayRadio, recommendationStations, currentStation ->
+        cityPreferencesRepository.get(),
+    ) { isPlayRadio, recommendationStations, currentStation, currentCity ->
         HomeScreenState(
             radioState = currentStation,
             recommendationStations = recommendationStations,
             isPlayRadio = isPlayRadio,
+            cityState = currentCity.toUiState(),
         )
     }.stateIn(
         scope = viewModelScope,

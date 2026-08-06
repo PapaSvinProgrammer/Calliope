@@ -2,4 +2,5 @@
 <resources>
     <string name="error_progress_bar_title">Не удалось запустить станцию</string>
     <string name="error_message_selected_radio_station">Нельзя выбрать не загруженный контент</string>
+    <string name="title_location_error_top_bar">Город не выбран</string>
 </resources>

@@ -1,10 +1,8 @@
 package com.mordva.domain.di
 
-import com.mordva.domain.data.repository.CityRepositoryImpl
 import com.mordva.domain.data.repository.RadioStationRepositoryImpl
 import com.mordva.domain.data.service.CityService
 import com.mordva.domain.data.service.RadioStationService
-import com.mordva.domain.domain.repository.CityRepository
 import com.mordva.domain.domain.repository.RadioStationRepository
 import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import org.koin.core.module.dsl.factoryOf
@@ -18,7 +16,6 @@ val homeDomainModule = module {
     factoryOf(::LoadRadioStationsUseCase)
 
     singleOf(::RadioStationRepositoryImpl) bind RadioStationRepository::class
-    singleOf(::CityRepositoryImpl) bind CityRepository::class
 
     single<RadioStationService> {
         val retrofit = get<Retrofit>()

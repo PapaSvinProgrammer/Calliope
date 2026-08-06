@@ -6,7 +6,7 @@ import okhttp3.OkHttpClient
 
 data class AuthSdkConfig(
     val context: Context,
-    val apiUrl: String = "",
+    val apiUrl: String = "https://mordva-calliope.ru/api/",
     val httpClient: OkHttpClient = OkHttpClient(),
     val json: Json = Json {
         ignoreUnknownKeys = true

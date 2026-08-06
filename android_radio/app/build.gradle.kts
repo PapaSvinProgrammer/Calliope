@@ -31,6 +31,8 @@ dependencies {
     implementation(projects.features.home.presentation)
     implementation(projects.features.home.domain)
     implementation(projects.features.controlBar)
+    implementation(projects.features.location.presentation)
+    implementation(projects.features.location.domain)
     implementation(projects.core.datastore.api)
     implementation(projects.core.datastore.impl)
     implementation(projects.core.authSdk.datastore)

@@ -1,6 +1,6 @@
 package com.mordva.feature.home.state
 
-internal sealed interface HomeScreenEvent {
+sealed interface HomeScreenEvent {
     data class MovePager(val position: Int) : HomeScreenEvent
     data object ShowSelectStationErrorMessage : HomeScreenEvent
     data object ShowLoadMoreErrorMessage : HomeScreenEvent

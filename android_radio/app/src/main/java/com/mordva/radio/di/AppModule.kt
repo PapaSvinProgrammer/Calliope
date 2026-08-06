@@ -20,7 +20,6 @@ val appModule = module {
     single<AuthSdk> {
         val config = AuthSdkConfig(
             context = get(),
-            apiUrl = "https://mordva-calliope.ru/api/",
         )
 
         AuthSdkProvider.provide(config)
