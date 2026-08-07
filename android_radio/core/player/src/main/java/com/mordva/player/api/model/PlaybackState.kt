@@ -13,11 +13,4 @@ data class PlaybackState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val error: String? = null
-) {
-    val progress: Float
-        get() {
-            if (durationMs <= 0L) return 0f
-
-            return (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-        }
-}
+)

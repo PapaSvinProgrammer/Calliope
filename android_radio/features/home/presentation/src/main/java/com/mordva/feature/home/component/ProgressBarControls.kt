@@ -85,10 +85,11 @@ private fun RowScope.RenderCustomProgressBar(
         }
 
         is HomeScreenRadioState.Success -> {
+            val progress = state.progress
             CustomProgressBar(
-                currentValue = state.currentValue,
-                maxValue = state.maxValue,
-                title = state.station.title,
+                currentValue = progress ?: 1f,
+                maxValue = 1f,
+                title = state.title,
                 modifier = Modifier.weight(1f),
             )
         }

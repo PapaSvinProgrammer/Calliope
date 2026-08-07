@@ -11,6 +11,8 @@ import com.mordva.feature.home.state.HomeScreenAction
 import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
+import com.mordva.feature.home.utils.toAudioItem
+import com.mordva.feature.home.utils.toRadioState
 import com.mordva.feature.home.utils.toUiState
 import com.mordva.player.api.PlaybackManager
 import kotlinx.coroutines.Job
@@ -29,11 +31,9 @@ internal class HomeViewModel(
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
     private val playbackManager: PlaybackManager,
 ) : ViewModel() {
-    private val currentStationState =
-        MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
-    private val recommendationStationsState =
-        MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
-    private val isPlayRadioState = MutableStateFlow(false)
+    private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
+    private val settledRadioState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
+    private val settledIsPlayingState = MutableStateFlow(false)
 
     private val _uiEvent = Channel<HomeScreenEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
@@ -46,15 +46,15 @@ internal class HomeViewModel(
     }
 
     val uiState: Flow<HomeScreenState> = combine(
-        isPlayRadioState,
         recommendationStationsState,
-        currentStationState,
+        settledRadioState,
+        settledIsPlayingState,
         filterPreferencesRepository.get(),
-    ) { isPlayRadio, recommendationStations, currentStation, filters ->
+    ) { recommendationStations, radioState, isPlaying, filters ->
         HomeScreenState(
-            radioState = currentStation,
+            radioState = radioState,
             recommendationStations = recommendationStations,
-            isPlayRadio = isPlayRadio,
+            isPlayRadio = isPlaying,
             cityState = (filters.cities.firstOrNull() ?: CityData()).toUiState(),
         )
     }.stateIn(
@@ -79,7 +79,7 @@ internal class HomeViewModel(
         val stationState = recommendationStationsState.value.getOrNull(selectedIndex)
 
         if (stationState is HomeScreenRadioState.Success) {
-            currentStationState.update { stationState }
+            playbackManager.play(stationState.toAudioItem())
         } else {
             sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
         }
@@ -99,7 +99,7 @@ internal class HomeViewModel(
 
         loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
             recommendationStationsState.update {
-                stations.map { HomeScreenRadioState.Success(station = it) }
+                stations.map(RadioStation::toRadioState)
             }
         }
     }
@@ -132,16 +132,29 @@ internal class HomeViewModel(
     }
 
     private fun appendLoadedStations(stations: List<RadioStation>) {
-        val newItems = stations.map { HomeScreenRadioState.Success(station = it) }
+        val newItems = stations.map(RadioStation::toRadioState)
 
         recommendationStationsState.update { current ->
             current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
         }
+
+//        playbackManager.playPlaylist(
+//            tracks = TODO(),
+//            startIndex = TODO()
+//        )
     }
 
     private fun observePlaybackState() = viewModelScope.launch {
-        playbackManager.state.collect {
-            Log.d(TAG, "observePlaybackState = $it")
+        playbackManager.state.collect { playbackState ->
+            Log.d(TAG, "observePlaybackState = $playbackState")
+            val mappedState = playbackState.toRadioState()
+
+            if (mappedState is HomeScreenRadioState.Success ||
+                mappedState is HomeScreenRadioState.Error
+            ) {
+                settledRadioState.value = mappedState
+                settledIsPlayingState.value = playbackState.isPlaying
+            }
         }
     }
 

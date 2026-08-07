@@ -68,9 +68,9 @@ fun ImageSquareWithShadow(
     }
 
     when (asyncImageState) {
-        is AsyncImagePainter.State.Empty -> ErrorImageContent(modifier)
-
-        is AsyncImagePainter.State.Loading -> {
+        is AsyncImagePainter.State.Empty,
+        is AsyncImagePainter.State.Loading,
+            -> {
             Box(
                 modifier = modifier
                     .clip(RoundedCornerShape(Resources.Dimens.DP10))

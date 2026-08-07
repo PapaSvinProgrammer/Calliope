@@ -36,4 +36,6 @@ interface PlaybackManager {
     fun stop()
 
     fun clearError()
+
+    fun addItems(tracks: List<AudioItem>)
 }

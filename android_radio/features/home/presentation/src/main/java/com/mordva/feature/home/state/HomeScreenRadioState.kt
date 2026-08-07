@@ -1,19 +1,30 @@
 package com.mordva.feature.home.state
 
-import com.mordva.domain.domain.model.RadioStation
-
 internal sealed interface HomeScreenRadioState {
     data object Error : HomeScreenRadioState
 
     data object Loading : HomeScreenRadioState
 
     data class Success(
-        val maxValue: Float = 0f,
-        val currentValue: Float = 0f,
-        val station: RadioStation,
-    ) : HomeScreenRadioState
+        val id: Int,
+        val title: String,
+        val description: String = "",
+        val artworkUrl: String? = null,
+        val streamUrl: String = "",
+        val elapsedMs: Long = 0L,
+        val durationMs: Long? = null,
+    ) : HomeScreenRadioState {
+        val progress: Float?
+            get() = durationMs
+                ?.takeIf { it > 0L }
+                ?.let { duration ->
+                    (elapsedMs.toDouble() / duration)
+                        .coerceIn(0.0, 1.0)
+                        .toFloat()
+                }
+    }
 }
 
 internal fun HomeScreenRadioState.getStationId(): Int? {
-    return (this as? HomeScreenRadioState.Success)?.station?.id
+    return (this as? HomeScreenRadioState.Success)?.id
 }

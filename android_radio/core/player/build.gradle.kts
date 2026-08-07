@@ -1,5 +1,6 @@
 plugins {
     id("radio.android.library.core")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -7,6 +8,9 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.datastore.api)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)

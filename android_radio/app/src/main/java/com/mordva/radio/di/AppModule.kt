@@ -1,5 +1,7 @@
 package com.mordva.radio.di
 
+import androidx.datastore.core.DataStore
+import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.player.api.PlaybackManager
 import com.mordva.player.api.provider.PlaybackManagerProvider
 import com.mordva.radio.domain.MainViewModel
@@ -32,6 +34,7 @@ val appModule = module {
         PlaybackManagerProvider.provide(
             context = get(),
             scope = get(named(APP_SCOPE)),
+            playbackDataStore = get<DataStore<PlaybackData>>(Qualifiers.PLAYBACK_DATA_STORE),
         )
     }
 }

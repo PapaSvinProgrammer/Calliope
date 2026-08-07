@@ -62,10 +62,10 @@ internal fun RadioCoverPager(
 
                 is HomeScreenRadioState.Success -> {
                     RadioPagerItem(
-                        id = item.station.id,
-                        imageUrl = item.station.imageUrl,
-                        title = item.station.title,
-                        isSelected = selectedId == item.station.id,
+                        id = item.id,
+                        imageUrl = item.artworkUrl.orEmpty(),
+                        title = item.title,
+                        isSelected = selectedId == item.id,
                         pageOffset = pageOffset,
                         onClick = { onClickPagerItem(page) },
                         modifier = Modifier.radioItemParams(pageOffset),
