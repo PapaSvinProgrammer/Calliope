@@ -213,7 +213,7 @@ internal class Media3PlaybackManager(
         val pausedDurationMs = pausedAtElapsedRealtimeMs
             ?.let { elapsedRealtime() - it }
             ?: 0L
-        
+
         pausedAtElapsedRealtimeMs = null
 
         if (pausedDurationMs >= MAX_PAUSE_BEFORE_LIVE_MS) {
