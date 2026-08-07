@@ -2,6 +2,7 @@ package com.mordva.player.impl
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.SystemClock.elapsedRealtime
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.media3.common.C
@@ -44,6 +45,7 @@ internal class Media3PlaybackManager(
     private var controller: MediaController? = null
 
     private var progressJob: Job? = null
+    private var pausedAtElapsedRealtimeMs: Long? = null
 
     private val listener = object : Player.Listener {
         override fun onEvents(
@@ -149,17 +151,21 @@ internal class Media3PlaybackManager(
         }
     }
 
-    override fun play() = executeWhenConnected { it.play() }
+    override fun play() = executeWhenConnected(::resumeOrJumpToLive)
 
     override fun pause() {
-        controller?.pause()
+        controller?.let { player ->
+            pausedAtElapsedRealtimeMs = elapsedRealtime()
+            player.pause()
+        }
     }
 
     override fun togglePlayPause() = executeWhenConnected { player ->
         if (player.isPlaying) {
+            pausedAtElapsedRealtimeMs = elapsedRealtime()
             player.pause()
         } else {
-            player.play()
+            resumeOrJumpToLive(player)
         }
     }
 
@@ -201,6 +207,21 @@ internal class Media3PlaybackManager(
             val items = tracks.map(AudioItem::toMediaItem)
             player.addMediaItems(items)
         }
+    }
+
+    private fun resumeOrJumpToLive(player: MediaController) {
+        val pausedDurationMs = pausedAtElapsedRealtimeMs
+            ?.let { elapsedRealtime() - it }
+            ?: 0L
+        
+        pausedAtElapsedRealtimeMs = null
+
+        if (pausedDurationMs >= MAX_PAUSE_BEFORE_LIVE_MS) {
+            val currentItem = player.currentMediaItem ?: return
+            player.setMediaItem(currentItem, true)
+            player.prepare()
+        }
+        player.play()
     }
 
     private fun executeWhenConnected(
@@ -276,5 +297,6 @@ internal class Media3PlaybackManager(
 
     private companion object {
         const val TAG = "Media3PlaybackManager"
+        const val MAX_PAUSE_BEFORE_LIVE_MS = 30_000L
     }
 }
