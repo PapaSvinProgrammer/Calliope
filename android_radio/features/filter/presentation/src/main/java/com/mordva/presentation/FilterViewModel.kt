@@ -3,8 +3,8 @@ package com.mordva.presentation
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mordva.datastore.api.model.CityData
-import com.mordva.datastore.api.repository.CityPreferencesRepository
+import com.mordva.datastore.api.model.FilterData
+import com.mordva.datastore.api.repository.FilterPreferencesRepository
 import com.mordva.domain.location.domain.model.City
 import com.mordva.domain.location.domain.usecase.LoadCityUseCase
 import com.mordva.domain.location.domain.usecase.SearchCityUseCase
@@ -14,8 +14,8 @@ import com.mordva.presentation.state.FilterType
 import com.mordva.presentation.state.FilterUiState
 import com.mordva.presentation.state.LocationCityState
 import com.mordva.presentation.state.getItems
+import com.mordva.presentation.utils.toData
 import com.mordva.presentation.utils.toUiState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class FilterViewModel(
-    cityPreferencesRepository: CityPreferencesRepository,
+    private val filterPreferencesRepository: FilterPreferencesRepository,
     private val loadCityUseCase: LoadCityUseCase,
     private val searchCityUseCase: SearchCityUseCase,
 ) : ViewModel() {
@@ -44,39 +44,22 @@ internal class FilterViewModel(
     private val citiesState = MutableStateFlow<LocationCityState>(LocationCityState.Loading)
     private val searchTextState = MutableStateFlow("")
     private val currentFilterType = MutableStateFlow<FilterType>(FilterType.Location)
-    private val selectedCitiesState = MutableStateFlow<List<City>>(emptyList())
-    private val selectedCategoriesState = MutableStateFlow<Set<String>>(emptySet())
 
     private val _uiEvent = Channel<FilterEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
     val uiState = combine(
         citiesState,
-        cityPreferencesRepository.get(),
+        filterPreferencesRepository.get(),
         searchTextState,
         searchCitiesState,
         currentFilterType,
-        selectedCitiesState,
-        selectedCategoriesState,
-    ) { values ->
-        val cities = values[0] as LocationCityState
-        val currentCity = values[1] as CityData
-        val searchText = values[2] as String
-        val searchCities = values[3] as LocationCityState
-        val filterType = values[4] as FilterType
-
-        @Suppress("UNCHECKED_CAST")
-        val selectedCities = values[5] as List<City>
-
-        @Suppress("UNCHECKED_CAST")
-        val selectedCategories = values[6] as Set<String>
-
+    ) { cities, filters, searchText, searchCities, filterType ->
         FilterUiState(
             searchText = searchText,
             cityListState = handleCitiesAndSearchCities(cities, searchCities),
-            currentCity = currentCity.toUiState(),
-            selectedCities = selectedCities,
-            selectedCategories = selectedCategories,
+            selectedCities = filters.cities.mapNotNull { it.toUiState() },
+            selectedCategories = filters.categories,
             filterType = filterType,
         )
     }.stateIn(
@@ -104,70 +87,66 @@ internal class FilterViewModel(
         Log.d(TAG, "getInitialCities")
 
         loadCityUseCase.execute().onSuccess { cities ->
-            citiesState.update { LocationCityState.Success(cities) }
+            citiesState.value = LocationCityState.Success(cities)
         }.onFailure {
-            citiesState.update { LocationCityState.Error }
+            citiesState.value = LocationCityState.Error
         }
     }
 
     private fun loadMoreCities() {
         if (loadMoreJob?.isActive == true) return
-
-        Log.d(TAG, "loadCities")
-
         loadMoreJob = viewModelScope.launch {
-            loadCityUseCase.execute().onSuccess {
-                appendLoadedCities(it)
-            }.onFailure {
+            loadCityUseCase.execute().onSuccess(::appendLoadedCities).onFailure {
                 sendEvent(FilterEvent.SendLoadMoreError)
             }
         }
     }
 
     private fun appendLoadedCities(newCities: List<City>) {
-        Log.d(TAG, "appendLoadedCities()")
         citiesState.update { current ->
             LocationCityState.Success(current.getItems() + newCities)
         }
     }
 
-    private fun toggleCity(city: City) = viewModelScope.launch(Dispatchers.Default) {
-        selectedCitiesState.update { selected ->
-            if (selected.any { it.id == city.id }) {
-                selected.filterNot { it.id == city.id }
-            } else {
-                selected + city
-            }
+    private fun toggleCity(city: City) = updateFilters { filters ->
+        val cities = if (filters.cities.any { it.id == city.id }) {
+            filters.cities.filterNot { it.id == city.id }
+        } else {
+            filters.cities + city.toData()
         }
+        filters.copy(cities = cities)
     }
 
-    private fun toggleCategory(category: String) = viewModelScope.launch(Dispatchers.Default) {
-        selectedCategoriesState.update { selected ->
-            if (category in selected) {
-                selected - category
-            } else {
-                selected + category
-            }
+    private fun toggleCategory(category: String) = updateFilters { filters ->
+        val categories = if (category in filters.categories) {
+            filters.categories - category
+        } else {
+            filters.categories + category
         }
+        filters.copy(categories = categories)
     }
 
-    private fun resetFilters() {
-        selectedCitiesState.value = emptyList()
-        selectedCategoriesState.value = emptySet()
+    private fun resetFilters() = updateFilters { FilterData() }
+
+    private fun updateFilters(transform: (FilterData) -> FilterData) = viewModelScope.launch {
+        val current = uiState.value
+        val filters = FilterData(
+            cities = current.selectedCities.map(City::toData),
+            categories = current.selectedCategories,
+        )
+        filterPreferencesRepository
+            .update(transform(filters))
+            .onFailure { error ->
+                Log.e(TAG, "Failed to update filters", error)
+            }
     }
 
     private fun applyFiltersStub() {
-        Log.d(
-            TAG,
-            "applyFiltersStub(cities=${selectedCitiesState.value.map(City::id)}, " +
-                    "categories=${selectedCategoriesState.value})"
-        )
+        Log.d(TAG, "Filters are already persisted in DataStore")
     }
 
-    private fun searchCitiesByName(q: String) = viewModelScope.launch {
-        Log.d(TAG, "searchCitiesByName()")
-
-        searchCityUseCase.execute(q).onSuccess { cities ->
+    private fun searchCitiesByName(query: String) = viewModelScope.launch {
+        searchCityUseCase.execute(query).onSuccess { cities ->
             searchCitiesState.value = LocationCityState.Success(cities)
         }.onFailure {
             searchCitiesState.value = LocationCityState.Error
@@ -177,13 +156,7 @@ internal class FilterViewModel(
     private fun handleCitiesAndSearchCities(
         default: LocationCityState,
         search: LocationCityState,
-    ): LocationCityState {
-        return if (searchCitiesState.value !is LocationCityState.Init) {
-            search
-        } else {
-            default
-        }
-    }
+    ): LocationCityState = if (search is LocationCityState.Init) default else search
 
     @OptIn(FlowPreview::class)
     private fun observeSearchName() = viewModelScope.launch {
@@ -194,11 +167,10 @@ internal class FilterViewModel(
             .collectLatest { query ->
                 if (query.length < MIN_SEARCH_QUERY_LENGTH) {
                     searchCitiesState.value = LocationCityState.Init
-                    return@collectLatest
+                } else {
+                    searchCitiesState.value = LocationCityState.Loading
+                    searchCitiesByName(query)
                 }
-
-                searchCitiesState.value = LocationCityState.Loading
-                searchCitiesByName(query)
             }
     }
 
@@ -211,7 +183,7 @@ internal class FilterViewModel(
     }
 
     private companion object {
-        const val TAG = "LocationViewModel"
+        const val TAG = "FilterViewModel"
         const val MIN_SEARCH_QUERY_LENGTH = 2
         val DEBOUNCE_SEARCH = 300.milliseconds
         val STARTED_TIME = 5_000.milliseconds

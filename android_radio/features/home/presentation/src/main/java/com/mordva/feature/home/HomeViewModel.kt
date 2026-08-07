@@ -3,7 +3,8 @@ package com.mordva.feature.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mordva.datastore.api.repository.CityPreferencesRepository
+import com.mordva.datastore.api.model.CityData
+import com.mordva.datastore.api.repository.FilterPreferencesRepository
 import com.mordva.domain.domain.model.RadioStation
 import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import com.mordva.feature.home.state.HomeScreenAction
@@ -24,7 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class HomeViewModel(
-    cityPreferencesRepository: CityPreferencesRepository,
+    filterPreferencesRepository: FilterPreferencesRepository,
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
     private val playbackManager: PlaybackManager,
 ) : ViewModel() {
@@ -48,13 +49,13 @@ internal class HomeViewModel(
         isPlayRadioState,
         recommendationStationsState,
         currentStationState,
-        cityPreferencesRepository.get(),
-    ) { isPlayRadio, recommendationStations, currentStation, currentCity ->
+        filterPreferencesRepository.get(),
+    ) { isPlayRadio, recommendationStations, currentStation, filters ->
         HomeScreenState(
             radioState = currentStation,
             recommendationStations = recommendationStations,
             isPlayRadio = isPlayRadio,
-            cityState = currentCity.toUiState(),
+            cityState = (filters.cities.firstOrNull() ?: CityData()).toUiState(),
         )
     }.stateIn(
         scope = viewModelScope,
