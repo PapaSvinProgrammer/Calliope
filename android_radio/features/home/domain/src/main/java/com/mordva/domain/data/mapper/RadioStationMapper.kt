@@ -8,7 +8,9 @@ internal fun RadioStationDto.toDomain() = RadioStation(
     title = title,
     description = description,
     imageUrl = imageUrl,
-    streamUrl = streamUrl
+    imageWidth = imageWidth,
+    imageHeight = imageHeight,
+    streamUrl = streamUrl,
 )
 
 internal fun List<RadioStationDto>.toDomain() = map { it.toDomain() }

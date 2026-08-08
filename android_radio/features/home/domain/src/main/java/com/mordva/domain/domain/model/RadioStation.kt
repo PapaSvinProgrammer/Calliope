@@ -5,5 +5,7 @@ data class RadioStation(
     val title: String,
     val description: String,
     val imageUrl: String,
+    val imageWidth: Int?,
+    val imageHeight: Int?,
     val streamUrl: String,
 )

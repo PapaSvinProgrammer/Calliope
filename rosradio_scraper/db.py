@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS radio_station (
     name        VARCHAR(500) NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     imageurl    TEXT NOT NULL DEFAULT '',
+    imagewidth  INTEGER,
+    imageheight INTEGER,
     streamurl   TEXT NOT NULL DEFAULT '',
     createdat   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updatedat   TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -125,6 +127,19 @@ BEGIN
         WHERE table_name = 'city' AND column_name = 'region_image_id'
     ) THEN
         ALTER TABLE city ADD COLUMN region_image_id INTEGER REFERENCES region_image(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_station' AND column_name = 'imagewidth'
+    ) THEN
+        ALTER TABLE radio_station ADD COLUMN imagewidth INTEGER;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'radio_station' AND column_name = 'imageheight'
+    ) THEN
+        ALTER TABLE radio_station ADD COLUMN imageheight INTEGER;
     END IF;
 END $$;
 
@@ -312,18 +327,24 @@ def link_station_city(conn, station_id: int, city_id: int):
         )
 
 
-def update_station_image(conn, station_id: int, image_url: str):
-    """Обновляет imageurl для существующей станции."""
+def update_station_image(
+    conn, station_id: int, image_url: str,
+    image_width: int | None = None, image_height: int | None = None,
+):
+    """Обновляет URL и исходные размеры изображения существующей станции."""
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE radio_station
-            SET imageurl = %s, updatedat = %s
+            SET imageurl = %s,
+                imagewidth = %s,
+                imageheight = %s,
+                updatedat = %s
             WHERE id = %s
             """,
-            (image_url, now, station_id),
+            (image_url, image_width, image_height, now, station_id),
         )
 
 

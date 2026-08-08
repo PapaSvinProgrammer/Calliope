@@ -62,6 +62,8 @@ class RadioStationService(
         name = this.name,
         description = this.description,
         imageUrl = this.imageUrl,
+        imageWidth = this.imageWidth,
+        imageHeight = this.imageHeight,
         streamUrl = this.streamUrl,
         createdAt = this.createdAt,
         updatedAt = this.updatedAt

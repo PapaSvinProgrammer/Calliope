@@ -9,6 +9,8 @@ internal fun RadioStation.toRadioState() = HomeScreenRadioState.Success(
     title = title,
     description = description,
     artworkUrl = imageUrl,
+    artworkWidth = imageWidth,
+    artworkHeight = imageHeight,
     streamUrl = streamUrl,
 )
 
