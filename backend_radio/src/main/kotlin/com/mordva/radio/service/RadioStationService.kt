@@ -21,7 +21,7 @@ class RadioStationService(
     @Transactional(readOnly = true)
     fun getAllRadioStations(page: Int, size: Int): PageDto<RadioStationDto> {
         val pageable = PageRequest.of(page, size)
-        val stationPage = radioStationRepository.findAll(pageable)
+        val stationPage = radioStationRepository.findAllRecommendedFirst(pageable)
         return PageDto(
             content = stationPage.content.map { it.toDto() },
             page = stationPage.number,

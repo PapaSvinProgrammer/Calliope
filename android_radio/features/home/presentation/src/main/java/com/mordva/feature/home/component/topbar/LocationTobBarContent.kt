@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.mordva.system_ui.OverlappingImages
 import com.mordva.system_ui.Resources
 
 @Composable
@@ -29,8 +30,8 @@ internal fun LocationTopBarContent(
                 .padding(vertical = Resources.Dimens.DP5, horizontal = Resources.Dimens.DP10)
                 .align(Alignment.Center),
         ) {
-            OverlappingCircleContents(images)
-            Spacer(modifier = Modifier.width(Resources.Dimens.DP8 * images.size))
+            OverlappingImages(images)
+            Spacer(modifier = Modifier.width(Resources.Dimens.DP5))
             Text(
                 text = title,
                 fontSize = MaterialTheme.typography.bodyLarge.fontSize,

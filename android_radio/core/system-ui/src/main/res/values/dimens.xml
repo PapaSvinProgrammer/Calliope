@@ -13,4 +13,5 @@
     <dimen name="DP30">30dp</dimen>
     <dimen name="DP45">45dp</dimen>
     <dimen name="icon_button_size">48dp</dimen>
+    <dimen name="icon_button_size_offset">24dp</dimen>
 </resources>

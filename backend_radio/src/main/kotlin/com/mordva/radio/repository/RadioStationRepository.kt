@@ -11,6 +11,18 @@ import org.springframework.stereotype.Repository
 @Repository
 interface RadioStationRepository : JpaRepository<RadioStation, Int> {
 
+    @Query("""
+        SELECT rs FROM RadioStation rs
+        ORDER BY
+            CASE
+                WHEN rs.imageUrl = 'https://storage.yandexcloud.net/mordva-calliope/Default_Logo.jpg' THEN 1
+                ELSE 0
+            END,
+            LOWER(rs.name),
+            rs.id
+    """)
+    fun findAllRecommendedFirst(pageable: Pageable): Page<RadioStation>
+
     @Query("SELECT rs FROM RadioStation rs LEFT JOIN FETCH rs.cities WHERE rs.id = :id")
     fun findByIdWithCities(@Param("id") id: Int): RadioStation?
 

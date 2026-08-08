@@ -1,85 +1,166 @@
 package com.mordva.feature.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mordva.datastore.api.model.CityData
+import com.mordva.datastore.api.repository.FilterPreferencesRepository
+import com.mordva.domain.domain.model.RadioStation
+import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import com.mordva.feature.home.state.HomeScreenAction
-import com.mordva.feature.home.state.HomeScreenCityState
+import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
+import com.mordva.feature.home.utils.toAudioItem
+import com.mordva.feature.home.utils.toRadioState
+import com.mordva.feature.home.utils.toUiState
+import com.mordva.player.api.PlaybackManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlin.collections.listOf
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-internal class HomeViewModel : ViewModel() {
-    private val isPlayRadioState = MutableStateFlow(false)
-    private val state = MutableStateFlow(false)
+internal class HomeViewModel(
+    filterPreferencesRepository: FilterPreferencesRepository,
+    private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
+    private val playbackManager: PlaybackManager,
+) : ViewModel() {
+    private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
+    private val settledRadioState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
+    private val settledIsPlayingState = MutableStateFlow(false)
+
+    private val _uiEvent = Channel<HomeScreenEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private var loadMoreJob: Job? = null
+
+    init {
+        getInitialRadioStations()
+        observePlaybackState()
+    }
 
     val uiState: Flow<HomeScreenState> = combine(
-        isPlayRadioState,
-        state,
-    ) { isPlayRadio, state ->
+        recommendationStationsState,
+        settledRadioState,
+        settledIsPlayingState,
+        filterPreferencesRepository.get(),
+    ) { recommendationStations, radioState, isPlaying, filters ->
         HomeScreenState(
-//            radioState = HomeScreenRadioState.Loading,
-            radioState = HomeScreenRadioState.Success(
-                maxValue = 100f,
-                currentValue = 40f,
-                title = "Comedy Radio",
-                imageUrl = "https://i.ytimg.com/vi/DIUzoDj0STc/hq720.jpg?sqp=-oaymwEXCNUGEOADIAQqCwjVARCqCBh4INgESFo&amp;rs=AMzJL3me5GJIFP9wrXOSLUV_HM6VazclvQ",
-            ),
-            cityState = HomeScreenCityState.Success(
-                emblemUrl = "https://www.ph4.ru/DL/HERALD/CITIES/ru/arms_achinsk.gif",
-                flagUrl = "https://www.ph4.ru/DL/HERALD/COUNTRIES/ru/flags_krasnodar.gif",
-                title = "Москва"
-            ),
-            isPlayRadio = isPlayRadio,
-            recommendationRadios = listOf(
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Первое радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                ),
-                HomeScreenRadioState.Loading,
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Второе радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                ),
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Третье радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                ),
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Четвёртое радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                ),
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Пятое радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                ),
-                HomeScreenRadioState.Success(
-                    maxValue = 1f,
-                    currentValue = 1f,
-                    title = "Шестое радио",
-                    imageUrl = "https://comicbook.com/wp-content/uploads/sites/4/2025/03/Invincible-Season-3-Episode-8-Finale-Reactions.jpeg?w=819"
-                )
-            )
+            radioState = radioState,
+            recommendationStations = recommendationStations,
+            isPlayRadio = isPlaying,
+            cityState = (filters.cities.firstOrNull() ?: CityData()).toUiState(),
         )
-    }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = HomeScreenState()
+    )
 
     fun onActionHandle(action: HomeScreenAction) = when (action) {
         HomeScreenAction.OnPlayClick -> togglePlayRadio()
         HomeScreenAction.OnSearchClick -> TODO()
+        is HomeScreenAction.OnPagerItemClick -> handleSelectedPagerItem(action.page)
+        is HomeScreenAction.OnPagerEnded -> loadMoreRadioStation()
+    }
+
+    private fun handleSelectedPagerItem(selectedIndex: Int) {
+        sendEvent(HomeScreenEvent.MovePager(selectedIndex))
+        updateCurrentRadioStation(selectedIndex)
+    }
+
+    private fun updateCurrentRadioStation(selectedIndex: Int) {
+        val stationState = recommendationStationsState.value.getOrNull(selectedIndex)
+
+        if (stationState is HomeScreenRadioState.Success) {
+            playbackManager.play(stationState.toAudioItem())
+        } else {
+            sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
+        }
     }
 
     private fun togglePlayRadio() {
-        isPlayRadioState.value = !isPlayRadioState.value
+        playbackManager.togglePlayPause()
+    }
+
+    private fun sendEvent(event: HomeScreenEvent) = viewModelScope.launch {
+        Log.d(TAG, "sendEvent(): event = $event")
+        _uiEvent.send(event)
+    }
+
+    private fun getInitialRadioStations() = viewModelScope.launch {
+        Log.d(TAG, "getRecommendationStations()")
+
+        loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
+            recommendationStationsState.update {
+                stations.map(RadioStation::toRadioState)
+            }
+        }
+    }
+
+    private fun loadMoreRadioStation() {
+        if (loadMoreJob?.isActive == true) return
+
+        Log.d(TAG, "loadRadioStation()")
+        showLoadMoreLoading()
+
+        loadMoreJob = viewModelScope.launch {
+            loadRadioStationsUseCase
+                .execute(DEFAULT_PAGER_SIZE)
+                .onSuccess { stations ->
+                    appendLoadedStations(stations)
+                }
+                .onFailure {
+                    hideLoadMoreLoading()
+                    sendEvent(HomeScreenEvent.ShowLoadMoreErrorMessage)
+                }
+        }
+    }
+
+    private fun showLoadMoreLoading() {
+        recommendationStationsState.update { it + HomeScreenRadioState.Loading }
+    }
+
+    private fun hideLoadMoreLoading() {
+        recommendationStationsState.update { it.dropLast(DEFAULT_LOADING_PAGER_SIZE) }
+    }
+
+    private fun appendLoadedStations(stations: List<RadioStation>) {
+        val newItems = stations.map(RadioStation::toRadioState)
+
+        recommendationStationsState.update { current ->
+            current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
+        }
+
+//        playbackManager.playPlaylist(
+//            tracks = TODO(),
+//            startIndex = TODO()
+//        )
+    }
+
+    private fun observePlaybackState() = viewModelScope.launch {
+        playbackManager.state.collect { playbackState ->
+            Log.d(TAG, "observePlaybackState = $playbackState")
+            val mappedState = playbackState.toRadioState()
+
+            if (mappedState is HomeScreenRadioState.Success ||
+                mappedState is HomeScreenRadioState.Error
+            ) {
+                settledRadioState.value = mappedState
+                settledIsPlayingState.value = playbackState.isPlaying
+            }
+        }
+    }
+
+    private companion object {
+        const val TAG = "HomeViewModel"
+        const val DEFAULT_PAGER_SIZE = 10
+        const val DEFAULT_LOADING_PAGER_SIZE = 1
     }
 }

@@ -8,9 +8,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,12 +25,18 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.mordva.control_bar.ControlBottomBar
 import com.mordva.feature.home.HomeScreenProvider
+import com.mordva.feature.search.presentation.SearchScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
+import com.mordva.navigation.route.SearchRoute
+import com.mordva.presentation.FilterBottomSheetProvider
 import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
 import com.mordva.radio.presentation.theme.AppTheme
 import com.mordva.system_ui.Resources
+import com.mordva.system_ui.composition_local.LocalSheetNavigator
+import com.mordva.system_ui.composition_local.LocalSnackbarHostState
+import com.mordva.system_ui.sheet.AppSheet
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -50,37 +62,65 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ComposeRadioApp(
     viewModel: MainViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle(MainUiState())
-    val backStack = rememberNavBackStack(Router.startDestination)
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            ControlBottomBar(
-                searchExpanded = uiState.searchExpanded,
-                searchText = uiState.searchText,
-                selectedItem = uiState.selectedItem,
-                action = { viewModel.action(it) },
-                modifier = Modifier.padding(Resources.Dimens.DP10),
+    val backStack = rememberNavBackStack(Router.startDestination)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.searchExpanded) {
+        when {
+            uiState.searchExpanded && backStack.lastOrNull() !is SearchRoute -> backStack.add(SearchRoute)
+            !uiState.searchExpanded && backStack.lastOrNull() is SearchRoute -> backStack.removeLastOrNull()
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalSnackbarHostState provides snackbarHostState,
+        LocalSheetNavigator provides { viewModel.updateSheetState(it) },
+    ) {
+        Scaffold(
+            bottomBar = {
+                ControlBottomBar(
+                    searchExpanded = uiState.searchExpanded,
+                    searchText = uiState.searchText,
+                    selectedItem = uiState.selectedItem,
+                    action = { viewModel.action(it) },
+                    modifier = Modifier.padding(Resources.Dimens.DP10),
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            modifier = Modifier.fillMaxSize(),
+        ) { innerPadding ->
+            NavDisplay(
+                backStack = backStack,
+                modifier = Modifier.fillMaxSize(),
+                entryProvider = { route ->
+                    when (route) {
+                        is HomeRoute -> NavEntry(route) {
+                            HomeScreenProvider()
+                        }
+
+                        is SearchRoute -> NavEntry(route) {
+                            SearchScreenProvider(query = uiState.searchText)
+                        }
+
+                        else -> NavEntry(route) {}
+                    }
+                },
             )
         }
-    ) { innerPadding ->
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier.fillMaxSize(),
-            entryProvider = { route ->
-                when (route) {
-                    is HomeRoute -> NavEntry(route) {
-                        HomeScreenProvider()
-                    }
 
-                    else -> NavEntry(route) {}
-                }
-            },
-        )
+        when (uiState.currentSheet) {
+            AppSheet.Location -> FilterBottomSheetProvider(
+                onDismissRequest = { viewModel.updateSheetState(null) },
+            )
+
+            null -> Unit
+        }
     }
 }

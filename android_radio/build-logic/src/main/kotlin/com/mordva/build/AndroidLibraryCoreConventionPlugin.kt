@@ -20,7 +20,11 @@ class AndroidLibraryCoreConventionPlugin : Plugin<Project> {
                     minSdk = 26
 
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-                    consumerProguardFiles("consumer-rules.pro")
+
+                    val consumerRules = project.file("consumer-rules.pro")
+                    if (consumerRules.exists()) {
+                        consumerProguardFiles(consumerRules)
+                    }
                 }
 
                 compileOptions {

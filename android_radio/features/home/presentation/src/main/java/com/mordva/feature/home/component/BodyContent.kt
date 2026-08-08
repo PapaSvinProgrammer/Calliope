@@ -42,14 +42,14 @@ internal fun BodyContent(
         ) {
             HomeImageContent(
                 radioState = uiState.radioState,
-                isExpanded = !uiState.isPlayRadio,
+                isExpanded = uiState.isPlayRadio,
                 onPlayClick = { onAction(HomeScreenAction.OnPlayClick) },
             )
         }
 
         ProgressBarControls(
             state = uiState.radioState,
-            isExpanded = uiState.isPlayRadio,
+            isExpanded = !uiState.isPlayRadio,
             onPauseClick = { onAction(HomeScreenAction.OnPlayClick) },
             modifier = Modifier.padding(horizontal = Resources.Dimens.DP16)
         )
@@ -73,8 +73,9 @@ private fun HomeImageContent(
             targetState = isExpanded,
         ) { isExpanded ->
             when (radioState) {
-                HomeScreenRadioState.Error -> TODO()
-                HomeScreenRadioState.Loading -> {
+                HomeScreenRadioState.Error,
+                HomeScreenRadioState.Loading,
+                    -> {
                     Box(
                         modifier = modifier
                             .size(dimensionResource(R.dimen.home_radio_image_size))
@@ -85,7 +86,7 @@ private fun HomeImageContent(
 
                 is HomeScreenRadioState.Success -> {
                     RenderHomeImageContent(
-                        imageUrl = radioState.imageUrl,
+                        imageUrl = radioState.artworkUrl.orEmpty(),
                         isExpanded = isExpanded,
                         onPlayClick = onPlayClick,
                     )

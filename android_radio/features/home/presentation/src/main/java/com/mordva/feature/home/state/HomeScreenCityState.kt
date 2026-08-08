@@ -6,8 +6,8 @@ internal sealed interface HomeScreenCityState {
     data object Loading : HomeScreenCityState
 
     data class Success(
-        val emblemUrl: String,
-        val flagUrl: String?,
+        val regionImageUrl: String?,
+        val cityImageUrl: String?,
         val title: String,
     ) : HomeScreenCityState
 }

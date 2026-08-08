@@ -21,8 +21,10 @@ android {
 }
 
 dependencies {
-    implementation(libs.retrofit)
+    api(libs.retrofit)
+    api(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.logging.interceptor)
-    implementation(libs.kotlinx.serialization.json)
+    implementation(projects.core.authSdk.sdk)
 }

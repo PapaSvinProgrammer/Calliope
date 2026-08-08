@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- Разрешает HTTP для остальных адресов -->
+    <base-config cleartextTrafficPermitted="true" />
+
+    <!-- Для API HTTP запрещён, HTTPS защищён pinning -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">mordva-calliope.ru</domain>
+
+        <pin-set>
+            <pin digest="SHA-256">LoMHBotttiDko50Gi13uXW71eIy7LAttI+rYT8wXF4w=</pin>
+            <pin digest="SHA-256">nWN7PSep5XDQdge5zK24CnCRXHr3KvzhKEGxsdqCX9E=</pin>
+            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
+        </pin-set>
+    </domain-config>
+
+</network-security-config>

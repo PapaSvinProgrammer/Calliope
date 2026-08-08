@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,14 +19,17 @@ import kotlin.math.absoluteValue
 
 @Composable
 internal fun RadioCoverPager(
+    pagerState: PagerState,
+    selectedId: Int?,
     items: List<HomeScreenRadioState>,
+    onClickPagerItem: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
 
-    val pagerState = rememberPagerState(pageCount = { items.size })
-
-    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+    ) {
         val params = calculateRadioPagerParams(
             containerWidth = maxWidth,
             horizontalPadding = Resources.Dimens.DP20,
@@ -41,7 +43,9 @@ internal fun RadioCoverPager(
             contentPadding = PaddingValues(horizontal = params.edgeContentPadding),
             pageSize = PageSize.Fixed(params.pageWidth),
             pageSpacing = -params.overlap,
-            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
         ) { page ->
             val item = items[page]
             val pageOffset = pagerState.calculatePageOffset(page)
@@ -52,15 +56,18 @@ internal fun RadioCoverPager(
                 HomeScreenRadioState.Loading -> {
                     ShimmerRadioPagerItem(
                         pageOffset = pageOffset,
-                        modifier = Modifier.radioItemParams(pageOffset)
+                        modifier = Modifier.radioItemParams(pageOffset),
                     )
                 }
 
                 is HomeScreenRadioState.Success -> {
                     RadioPagerItem(
-                        imageUrl = item.imageUrl,
+                        id = item.id,
+                        imageUrl = item.artworkUrl.orEmpty(),
                         title = item.title,
+                        isSelected = selectedId == item.id,
                         pageOffset = pageOffset,
+                        onClick = { onClickPagerItem(page) },
                         modifier = Modifier.radioItemParams(pageOffset),
                     )
                 }

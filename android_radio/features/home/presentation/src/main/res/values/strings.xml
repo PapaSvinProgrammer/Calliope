@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="error_progress_bar_title">Couldn\'t start the station</string>
+    <string name="error_message_selected_radio_station">You can\'t select unloaded content</string>
+    <string name="title_location_error_top_bar">The city is not selected</string>
 </resources>
