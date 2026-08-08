@@ -21,6 +21,12 @@ class RadioStation() {
     @Column(name = "imageurl", nullable = false, columnDefinition = "TEXT")
     var imageUrl: String = ""
 
+    @Column(name = "imagewidth")
+    var imageWidth: Int? = null
+
+    @Column(name = "imageheight")
+    var imageHeight: Int? = null
+
     @Column(name = "streamurl", nullable = false, columnDefinition = "TEXT")
     var streamUrl: String = ""
 

@@ -10,6 +10,8 @@ internal sealed interface HomeScreenRadioState {
         val title: String,
         val description: String = "",
         val artworkUrl: String? = null,
+        val artworkWidth: Int? = null,
+        val artworkHeight: Int? = null,
         val streamUrl: String = "",
         val elapsedMs: Long = 0L,
         val durationMs: Long? = null,

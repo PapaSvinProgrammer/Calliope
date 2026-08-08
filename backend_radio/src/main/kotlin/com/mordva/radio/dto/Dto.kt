@@ -7,6 +7,8 @@ data class RadioStationDto(
     val name: String,
     val description: String,
     val imageUrl: String,
+    val imageWidth: Int?,
+    val imageHeight: Int?,
     val streamUrl: String,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime
@@ -17,6 +19,8 @@ data class RadioStationBriefDto(
     val name: String,
     val description: String,
     val imageUrl: String,
+    val imageWidth: Int?,
+    val imageHeight: Int?,
     val streamUrl: String
 )
 

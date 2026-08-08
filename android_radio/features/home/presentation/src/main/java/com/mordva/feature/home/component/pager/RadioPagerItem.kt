@@ -1,5 +1,6 @@
 package com.mordva.feature.home.component.pager
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -17,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +46,8 @@ import kotlin.math.absoluteValue
 internal fun RadioPagerItem(
     id: Int,
     imageUrl: String,
+    imageWidth: Int?,
+    imageHeight: Int?,
     title: String,
     pageOffset: Float,
     isSelected: Boolean,
@@ -80,6 +82,8 @@ internal fun RadioPagerItem(
 
     RadioPagerItemContent(
         imageUrl = imageUrl,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
         title = title,
         contentAlpha = contentAlpha,
         borderWidth = borderWidth,
@@ -96,6 +100,8 @@ internal fun RadioPagerItem(
 @Composable
 internal fun RadioPagerItemContent(
     imageUrl: String,
+    imageWidth: Int?,
+    imageHeight: Int?,
     title: String,
     contentAlpha: Float,
     borderWidth: Dp,
@@ -104,6 +110,13 @@ internal fun RadioPagerItemContent(
 ) {
     val shape = RoundedCornerShape(Resources.Dimens.DP16)
     val dynamicBorderColor = MaterialTheme.colorScheme.primary
+    val imageAspectRatio = if (imageWidth != null && imageHeight != null && imageHeight > 0) {
+        imageWidth.toFloat() / imageHeight
+    } else {
+        1f
+    }
+    val isNearlySquareImage = imageAspectRatio in 0.8f..1.25f
+    Log.d("RRRR", "imageUrl = $imageUrl; imageWidth = $imageWidth; imageHeight = $imageHeight")
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -124,24 +137,19 @@ internal fun RadioPagerItemContent(
                 cornerRadius = Resources.Dimens.DP16,
                 progress = dynamicBorderProgress,
             )
-            .padding(
-                top = Resources.Dimens.DP8,
-                bottom = Resources.Dimens.DP16,
-                start = Resources.Dimens.DP8,
-                end = Resources.Dimens.DP8,
-            ),
+            .padding(bottom = Resources.Dimens.DP16),
     ) {
         AsyncImage(
             model = imageUrl,
             contentDescription = null,
-            contentScale = ContentScale.Crop,
+            contentScale = if (isNearlySquareImage) ContentScale.Crop else ContentScale.Fit,
             modifier = Modifier
-                .aspectRatio(1f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Resources.Dimens.DP16)),
+                .aspectRatio(1f)
+                .clip(shape),
         )
 
-        Spacer(modifier = Modifier.height(Resources.Dimens.DP10))
+        Spacer(modifier = Modifier.height(Resources.Dimens.DP2))
 
         Text(
             text = title,

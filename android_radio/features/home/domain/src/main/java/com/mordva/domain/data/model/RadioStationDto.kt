@@ -13,6 +13,10 @@ internal data class RadioStationDto(
     val description: String,
     @SerialName("imageUrl")
     val imageUrl: String,
+    @SerialName("imageWidth")
+    val imageWidth: Int? = null,
+    @SerialName("imageHeight")
+    val imageHeight: Int? = null,
     @SerialName("streamUrl")
     val streamUrl: String,
     @SerialName("createdAt")

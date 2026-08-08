@@ -64,6 +64,8 @@ internal fun RadioCoverPager(
                     RadioPagerItem(
                         id = item.id,
                         imageUrl = item.artworkUrl.orEmpty(),
+                        imageWidth = item.artworkWidth,
+                        imageHeight = item.artworkHeight,
                         title = item.title,
                         isSelected = selectedId == item.id,
                         pageOffset = pageOffset,
