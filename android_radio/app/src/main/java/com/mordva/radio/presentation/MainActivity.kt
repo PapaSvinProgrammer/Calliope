@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
@@ -24,8 +25,10 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.mordva.control_bar.ControlBottomBar
 import com.mordva.feature.home.HomeScreenProvider
+import com.mordva.feature.search.presentation.SearchScreenProvider
 import com.mordva.navigation.Router
 import com.mordva.navigation.route.HomeRoute
+import com.mordva.navigation.route.SearchRoute
 import com.mordva.presentation.FilterBottomSheetProvider
 import com.mordva.radio.domain.MainViewModel
 import com.mordva.radio.domain.action
@@ -69,6 +72,13 @@ private fun ComposeRadioApp(
     val backStack = rememberNavBackStack(Router.startDestination)
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(uiState.searchExpanded) {
+        when {
+            uiState.searchExpanded && backStack.lastOrNull() !is SearchRoute -> backStack.add(SearchRoute)
+            !uiState.searchExpanded && backStack.lastOrNull() is SearchRoute -> backStack.removeLastOrNull()
+        }
+    }
+
     CompositionLocalProvider(
         LocalSnackbarHostState provides snackbarHostState,
         LocalSheetNavigator provides { viewModel.updateSheetState(it) },
@@ -93,6 +103,10 @@ private fun ComposeRadioApp(
                     when (route) {
                         is HomeRoute -> NavEntry(route) {
                             HomeScreenProvider()
+                        }
+
+                        is SearchRoute -> NavEntry(route) {
+                            SearchScreenProvider(query = uiState.searchText)
                         }
 
                         else -> NavEntry(route) {}

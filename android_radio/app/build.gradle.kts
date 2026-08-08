@@ -32,6 +32,7 @@ dependencies {
     implementation(projects.features.home.domain)
     implementation(projects.features.controlBar)
     implementation(projects.features.filter.presentation)
+    implementation(projects.features.search.presentation)
     implementation(projects.features.filter.domain)
     implementation(projects.core.datastore.api)
     implementation(projects.core.datastore.impl)
@@ -42,4 +43,5 @@ dependencies {
     implementation(libs.androidx.compose.ui.text.google.fonts)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore)
+    implementation(libs.coil.network.okhttp)
 }

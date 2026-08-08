@@ -22,17 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mordva.filter.presentation.R
-import com.mordva.presentation.component.CategorySuccessContent
 import com.mordva.presentation.component.EmptyContent
 import com.mordva.presentation.component.FilterSearchBar
-import com.mordva.presentation.component.FilterTabs
 import com.mordva.presentation.component.LoadingContent
 import com.mordva.presentation.component.LocationSuccessContent
 import com.mordva.presentation.state.FilterAction
 import com.mordva.presentation.state.FilterAction.OnListEnded
 import com.mordva.presentation.state.FilterAction.OnSearchTextChanged
 import com.mordva.presentation.state.FilterEvent
-import com.mordva.presentation.state.FilterType
 import com.mordva.presentation.state.FilterUiState
 import com.mordva.presentation.state.LocationCityState
 import com.mordva.system_ui.CollectWithLifecycle
@@ -57,8 +54,8 @@ internal fun FilterBottomSheet(
     val lazyListState = rememberLazyListState()
     val isNearEnd = rememberIsNearEnd(lazyListState)
 
-    LaunchedEffect(isNearEnd, uiState.filterType) {
-        if (isNearEnd && uiState.filterType == FilterType.Location) {
+    LaunchedEffect(isNearEnd) {
+        if (isNearEnd) {
             viewModel.onActionHandle(OnListEnded)
         }
     }
@@ -83,24 +80,13 @@ internal fun FilterBottomSheet(
             .fillMaxHeight(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            FilterTabs(
-                selectedType = uiState.filterType,
-                onTypeClick = {
-                    viewModel.onActionHandle(FilterAction.OnFilterTypeClick(it))
-                },
+            FilterSearchBar(
+                searchBarState = searchBarState,
+                textFieldState = textFieldState,
+                onVoiceInputClick = {},
             )
 
-            Spacer(modifier = Modifier.height(Resources.Dimens.DP16))
-
-            if (uiState.filterType == FilterType.Location) {
-                FilterSearchBar(
-                    searchBarState = searchBarState,
-                    textFieldState = textFieldState,
-                    onVoiceInputClick = {},
-                )
-
-                Spacer(modifier = Modifier.height(Resources.Dimens.DP12))
-            }
+            Spacer(modifier = Modifier.height(Resources.Dimens.DP12))
 
             Box(modifier = Modifier.weight(1f)) {
                 FilterContent(
@@ -119,24 +105,16 @@ private fun FilterContent(
     lazyListState: LazyListState,
     onAction: (FilterAction) -> Unit,
 ) {
-    when (uiState.filterType) {
-        FilterType.Category -> CategorySuccessContent(
-            categories = uiState.categories,
-            selectedCategories = uiState.selectedCategories,
-            onItemClick = { onAction(FilterAction.OnCategoryClick(it)) },
+    when (val state = uiState.cityListState) {
+        LocationCityState.Loading -> LoadingContent()
+        is LocationCityState.Success -> LocationSuccessContent(
+            cityListState = state,
+            onItemClick = { onAction(FilterAction.OnLocationClick(it)) },
+            lazyListState = lazyListState,
+            selectedCityIds = uiState.selectedCities.mapTo(mutableSetOf()) { it.id },
         )
 
-        FilterType.Location -> when (val state = uiState.cityListState) {
-            LocationCityState.Loading -> LoadingContent()
-            is LocationCityState.Success -> LocationSuccessContent(
-                cityListState = state,
-                onItemClick = { onAction(FilterAction.OnLocationClick(it)) },
-                lazyListState = lazyListState,
-                selectedCityIds = uiState.selectedCities.mapTo(mutableSetOf()) { it.id },
-            )
-
-            LocationCityState.Error -> EmptyContent("Could not load cities")
-            LocationCityState.Init -> Unit
-        }
+        LocationCityState.Error -> EmptyContent("Could not load cities")
+        LocationCityState.Init -> Unit
     }
 }

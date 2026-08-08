@@ -15,19 +15,19 @@ internal interface RadioStationService {
         @Query("size") size: Int,
     ): Response<Pager<RadioStationDto>>
 
-    @GET("{id}")
+    @GET("radio-stations/{id}")
     suspend fun getByStationId(
         @Path("id") id: Int,
     ): Response<RadioStationDto>
 
-    @GET("{cityId}/radio-stations")
+    @GET("city/{cityId}/radio-stations")
     suspend fun getByCityId(
         @Path("cityId") cityId: Int,
         @Query("page") page: Int,
         @Query("size") size: Int,
     ): Response<Pager<RadioStationDto>>
 
-    @GET("search")
+    @GET("radio-stations/search")
     suspend fun searchByName(
         @Query("name") name: String,
         @Query("page") page: Int,

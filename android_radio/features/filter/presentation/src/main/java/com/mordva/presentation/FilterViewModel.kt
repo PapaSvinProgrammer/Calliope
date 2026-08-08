@@ -10,7 +10,6 @@ import com.mordva.domain.location.domain.usecase.LoadCityUseCase
 import com.mordva.domain.location.domain.usecase.SearchCityUseCase
 import com.mordva.presentation.state.FilterAction
 import com.mordva.presentation.state.FilterEvent
-import com.mordva.presentation.state.FilterType
 import com.mordva.presentation.state.FilterUiState
 import com.mordva.presentation.state.LocationCityState
 import com.mordva.presentation.state.getItems
@@ -43,7 +42,6 @@ internal class FilterViewModel(
     private val searchCitiesState = MutableStateFlow<LocationCityState>(LocationCityState.Init)
     private val citiesState = MutableStateFlow<LocationCityState>(LocationCityState.Loading)
     private val searchTextState = MutableStateFlow("")
-    private val currentFilterType = MutableStateFlow<FilterType>(FilterType.Location)
 
     private val _uiEvent = Channel<FilterEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
@@ -53,14 +51,11 @@ internal class FilterViewModel(
         filterPreferencesRepository.get(),
         searchTextState,
         searchCitiesState,
-        currentFilterType,
-    ) { cities, filters, searchText, searchCities, filterType ->
+    ) { cities, filters, searchText, searchCities ->
         FilterUiState(
             searchText = searchText,
             cityListState = handleCitiesAndSearchCities(cities, searchCities),
             selectedCities = filters.cities.mapNotNull { it.toUiState() },
-            selectedCategories = filters.categories,
-            filterType = filterType,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -77,9 +72,7 @@ internal class FilterViewModel(
         FilterAction.OnListEnded -> loadMoreCities()
         FilterAction.OnApplyClick -> applyFiltersStub()
         FilterAction.OnResetClick -> resetFilters()
-        is FilterAction.OnFilterTypeClick -> currentFilterType.value = action.type
         is FilterAction.OnLocationClick -> toggleCity(action.item)
-        is FilterAction.OnCategoryClick -> toggleCategory(action.category)
         is FilterAction.OnSearchTextChanged -> updateSearchText(action.text)
     }
 
@@ -117,22 +110,12 @@ internal class FilterViewModel(
         filters.copy(cities = cities)
     }
 
-    private fun toggleCategory(category: String) = updateFilters { filters ->
-        val categories = if (category in filters.categories) {
-            filters.categories - category
-        } else {
-            filters.categories + category
-        }
-        filters.copy(categories = categories)
-    }
-
     private fun resetFilters() = updateFilters { FilterData() }
 
     private fun updateFilters(transform: (FilterData) -> FilterData) = viewModelScope.launch {
         val current = uiState.value
         val filters = FilterData(
             cities = current.selectedCities.map(City::toData),
-            categories = current.selectedCategories,
         )
         filterPreferencesRepository
             .update(transform(filters))
