@@ -21,3 +21,12 @@ internal fun HomeScreenRadioState.Success.toAudioItem() = AudioItem(
     artist = description.takeIf(String::isNotBlank),
     artworkUri = artworkUrl?.takeIf(String::isNotBlank),
 )
+
+
+internal fun RadioStation.toAudioItem() = AudioItem(
+    id = id.toString(),
+    uri = streamUrl,
+    title = title,
+    artist = description,
+    artworkUri = imageUrl,
+)

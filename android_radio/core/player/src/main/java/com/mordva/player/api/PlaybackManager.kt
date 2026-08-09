@@ -12,10 +12,9 @@ interface PlaybackManager {
 
     fun play(track: AudioItem)
 
-    fun playPlaylist(
-        tracks: List<AudioItem>,
-        startIndex: Int = 0,
-    )
+    fun setPlaylist(tracks: List<AudioItem>)
+
+    fun playAt(index: Int)
 
     fun play()
 
@@ -36,6 +35,4 @@ interface PlaybackManager {
     fun stop()
 
     fun clearError()
-
-    fun addItems(tracks: List<AudioItem>)
 }

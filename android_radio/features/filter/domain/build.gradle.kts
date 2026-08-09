@@ -8,5 +8,6 @@ android {
 
 dependencies {
     implementation(projects.core.network)
+    implementation(projects.core.connectivity)
     implementation(libs.koin.android)
 }

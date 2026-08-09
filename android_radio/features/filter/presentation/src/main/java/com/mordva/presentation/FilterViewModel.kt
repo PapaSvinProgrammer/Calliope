@@ -79,18 +79,25 @@ internal class FilterViewModel(
     private fun getInitialCities() = viewModelScope.launch {
         Log.d(TAG, "getInitialCities")
 
-        loadCityUseCase.execute().onSuccess { cities ->
-            citiesState.value = LocationCityState.Success(cities)
-        }.onFailure {
-            citiesState.value = LocationCityState.Error
-        }
+        loadCityUseCase
+            .execute()
+            .results()
+            .collect { result ->
+                result.onSuccess { cities ->
+                    citiesState.value = LocationCityState.Success(cities)
+                }.onFailure {
+                    citiesState.value = LocationCityState.Error
+                }
+            }
     }
 
     private fun loadMoreCities() {
         if (loadMoreJob?.isActive == true) return
         loadMoreJob = viewModelScope.launch {
-            loadCityUseCase.execute().onSuccess(::appendLoadedCities).onFailure {
-                sendEvent(FilterEvent.SendLoadMoreError)
+            loadCityUseCase.execute().results().collect { result ->
+                result.onSuccess(::appendLoadedCities).onFailure {
+                    sendEvent(FilterEvent.SendLoadMoreError)
+                }
             }
         }
     }
@@ -129,10 +136,12 @@ internal class FilterViewModel(
     }
 
     private fun searchCitiesByName(query: String) = viewModelScope.launch {
-        searchCityUseCase.execute(query).onSuccess { cities ->
-            searchCitiesState.value = LocationCityState.Success(cities)
-        }.onFailure {
-            searchCitiesState.value = LocationCityState.Error
+        searchCityUseCase.execute(query).results().collect { result ->
+            result.onSuccess { cities ->
+                searchCitiesState.value = LocationCityState.Success(cities)
+            }.onFailure {
+                searchCitiesState.value = LocationCityState.Error
+            }
         }
     }
 

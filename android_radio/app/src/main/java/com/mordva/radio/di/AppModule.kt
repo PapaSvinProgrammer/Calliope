@@ -1,6 +1,9 @@
 package com.mordva.radio.di
 
 import androidx.datastore.core.DataStore
+import com.mordva.connectivity.AndroidNetworkMonitor
+import com.mordva.connectivity.NetworkMonitor
+import com.mordva.connectivity.NetworkRequestRetryManager
 import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.player.api.PlaybackManager
 import com.mordva.player.api.provider.PlaybackManagerProvider
@@ -22,6 +25,14 @@ const val DEFAULT_SCOPE = "DEFAULT_COROUTINE_SCOPE"
 val appModule = module {
     viewModelOf(::MainViewModel)
 
+    single<NetworkMonitor> { AndroidNetworkMonitor(get()) }
+    single {
+        NetworkRequestRetryManager(
+            networkMonitor = get(),
+            appScope = get(named(APP_SCOPE)),
+        )
+    }
+
     single<AuthSdk> {
         val config = AuthSdkConfig(
             context = get(),
@@ -34,7 +45,6 @@ val appModule = module {
         PlaybackManagerProvider.provide(
             context = get(),
             scope = get(named(APP_SCOPE)),
-            playbackDataStore = get<DataStore<PlaybackData>>(Qualifiers.PLAYBACK_DATA_STORE),
         )
     }
 }

@@ -4,26 +4,21 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.SystemClock.elapsedRealtime
 import android.util.Log
-import androidx.datastore.core.DataStore
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
-import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.player.api.AppMediaSessionService
 import com.mordva.player.api.PlaybackManager
 import com.mordva.player.api.model.AudioItem
 import com.mordva.player.api.model.PlaybackState
-import com.mordva.player.impl.utils.toAudioItem
 import com.mordva.player.impl.utils.toMediaItem
-import com.mordva.player.impl.utils.toPlaybackData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -35,7 +30,6 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class Media3PlaybackManager(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val playbackDataStore: DataStore<PlaybackData>,
 ) : PlaybackManager {
 
     private val _state = MutableStateFlow(PlaybackState())
@@ -48,10 +42,7 @@ internal class Media3PlaybackManager(
     private var pausedAtElapsedRealtimeMs: Long? = null
 
     private val listener = object : Player.Listener {
-        override fun onEvents(
-            player: Player,
-            events: Player.Events
-        ) {
+        override fun onEvents(player: Player, events: Player.Events) {
             updateState(player)
         }
 
@@ -104,7 +95,6 @@ internal class Media3PlaybackManager(
 
             _state.update { it.copy(isConnected = true) }
 
-            restoreLastTrack(newController)
             updateState(newController)
             startProgressUpdates()
         }.onFailure { exception ->
@@ -120,7 +110,6 @@ internal class Media3PlaybackManager(
     }
 
     override fun play(track: AudioItem) {
-        persist(track)
         _state.update { it.copy(error = null) }
         executeWhenConnected { player ->
             player.setMediaItem(track.toMediaItem())
@@ -129,23 +118,19 @@ internal class Media3PlaybackManager(
         }
     }
 
-    override fun playPlaylist(
-        tracks: List<AudioItem>,
-        startIndex: Int
-    ) {
-        if (tracks.isEmpty()) return
-
-        val safeIndex = startIndex.coerceIn(tracks.indices)
-        persist(tracks[safeIndex])
-        _state.update { it.copy(error = null) }
+    override fun setPlaylist(tracks: List<AudioItem>) {
         executeWhenConnected { player ->
-            val items = tracks.map(AudioItem::toMediaItem)
+            player.setMediaItems(tracks.map { it.toMediaItem() })
+            player.prepare()
+            Log.d(TAG, "setPlaylist(): size=${tracks.size}, ids=${tracks.joinToString { it.id }}")
+        }
+    }
 
-            player.setMediaItems(
-                items,
-                safeIndex,
-                C.TIME_UNSET
-            )
+    override fun playAt(index: Int) {
+        _state.update { it.copy(error = null) }
+
+        executeWhenConnected { player ->
+            player.seekTo(index, 0L)
             player.prepare()
             player.play()
         }
@@ -200,15 +185,6 @@ internal class Media3PlaybackManager(
         _state.update { it.copy(error = null) }
     }
 
-    override fun addItems(tracks: List<AudioItem>) {
-        if (tracks.isEmpty()) return
-
-        executeWhenConnected { player ->
-            val items = tracks.map(AudioItem::toMediaItem)
-            player.addMediaItems(items)
-        }
-    }
-
     private fun resumeOrJumpToLive(player: MediaController) {
         val pausedDurationMs = pausedAtElapsedRealtimeMs
             ?.let { elapsedRealtime() - it }
@@ -236,23 +212,6 @@ internal class Media3PlaybackManager(
         scope.launch {
             connect()
             controller?.let(action)
-        }
-    }
-
-    private suspend fun restoreLastTrack(player: MediaController) {
-        if (player.mediaItemCount > 0) return
-
-        val saved = playbackDataStore.data.first()
-
-        if (saved.id.isBlank() || saved.uri.isBlank()) return
-
-        player.setMediaItem(saved.toAudioItem().toMediaItem())
-        player.prepare()
-    }
-
-    private fun persist(track: AudioItem) {
-        scope.launch {
-            playbackDataStore.updateData { track.toPlaybackData() }
         }
     }
 

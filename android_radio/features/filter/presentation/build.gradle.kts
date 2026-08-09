@@ -8,5 +8,6 @@ android {
 
 dependencies {
     implementation(projects.features.filter.domain)
+    implementation(projects.core.connectivity)
     implementation(projects.core.datastore.api)
 }

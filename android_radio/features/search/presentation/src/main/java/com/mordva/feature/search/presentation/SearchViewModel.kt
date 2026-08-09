@@ -88,16 +88,18 @@ internal class SearchViewModel(
 
         searchRadioStationsUseCase
             .execute(value, PAGE_SIZE)
-            .onSuccess { stations ->
-                hasMoreStations = stations.size == PAGE_SIZE
-                content.value = if (stations.isEmpty()) {
-                    SearchContentState.Empty
-                } else {
-                    SearchContentState.Success(stations)
+            .results()
+            .collect { result ->
+                result.onSuccess { stations ->
+                    hasMoreStations = stations.size == PAGE_SIZE
+                    content.value = if (stations.isEmpty()) {
+                        SearchContentState.Empty
+                    } else {
+                        SearchContentState.Success(stations)
+                    }
+                }.onFailure {
+                    content.value = SearchContentState.Error
                 }
-            }
-            .onFailure {
-                content.value = SearchContentState.Error
             }
     }
 
@@ -112,12 +114,14 @@ internal class SearchViewModel(
             content.value = current.copy(isLoadingMore = true)
 
             searchRadioStationsUseCase.execute(value, PAGE_SIZE)
-                .onSuccess { stations ->
-                    hasMoreStations = stations.size == PAGE_SIZE
-                    appendStations(stations)
-                }
-                .onFailure {
-                    content.value = current.copy(isLoadingMore = false)
+                .results()
+                .collect { result ->
+                    result.onSuccess { stations ->
+                        hasMoreStations = stations.size == PAGE_SIZE
+                        appendStations(stations)
+                    }.onFailure {
+                        content.value = current.copy(isLoadingMore = false)
+                    }
                 }
         }
     }

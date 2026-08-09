@@ -11,10 +11,8 @@ object PlaybackManagerProvider {
     fun provide(
         context: Context,
         scope: CoroutineScope,
-        playbackDataStore: DataStore<PlaybackData>,
     ): PlaybackManager = Media3PlaybackManager(
         context = context,
         scope = scope,
-        playbackDataStore = playbackDataStore,
     )
 }

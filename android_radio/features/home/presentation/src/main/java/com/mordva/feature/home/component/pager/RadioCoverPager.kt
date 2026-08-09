@@ -47,7 +47,7 @@ internal fun RadioCoverPager(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter),
         ) { page ->
-            val item = items[page]
+            val item = items.getOrNull(page) ?: return@HorizontalPager
             val pageOffset = pagerState.calculatePageOffset(page)
 
             when (item) {
@@ -64,8 +64,6 @@ internal fun RadioCoverPager(
                     RadioPagerItem(
                         id = item.id,
                         imageUrl = item.artworkUrl.orEmpty(),
-                        imageWidth = item.artworkWidth,
-                        imageHeight = item.artworkHeight,
                         title = item.title,
                         isSelected = selectedId == item.id,
                         pageOffset = pageOffset,

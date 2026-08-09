@@ -31,8 +31,10 @@ internal class HomeViewModel(
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
     private val playbackManager: PlaybackManager,
 ) : ViewModel() {
-    private val recommendationStationsState = MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
-    private val settledRadioState = MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
+    private val recommendationStationsState =
+        MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
+    private val settledRadioState =
+        MutableStateFlow<HomeScreenRadioState>(HomeScreenRadioState.Loading)
     private val settledIsPlayingState = MutableStateFlow(false)
 
     private val _uiEvent = Channel<HomeScreenEvent>()
@@ -76,10 +78,11 @@ internal class HomeViewModel(
     }
 
     private fun updateCurrentRadioStation(selectedIndex: Int) {
-        val stationState = recommendationStationsState.value.getOrNull(selectedIndex)
+        Log.d(TAG, "updateCurrentRadioStation(): selectedIndex = $selectedIndex")
+        val selectedStation = recommendationStationsState.value.getOrNull(selectedIndex)
 
-        if (stationState is HomeScreenRadioState.Success) {
-            playbackManager.play(stationState.toAudioItem())
+        if (selectedStation is HomeScreenRadioState.Success) {
+            playbackManager.playAt(selectedIndex)
         } else {
             sendEvent(HomeScreenEvent.ShowSelectStationErrorMessage)
         }
@@ -97,9 +100,12 @@ internal class HomeViewModel(
     private fun getInitialRadioStations() = viewModelScope.launch {
         Log.d(TAG, "getRecommendationStations()")
 
-        loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).onSuccess { stations ->
-            recommendationStationsState.update {
-                stations.map(RadioStation::toRadioState)
+        loadRadioStationsUseCase.execute(DEFAULT_PAGER_SIZE).results().collect { result ->
+            result.onSuccess { stations ->
+                recommendationStationsState.update {
+                    stations.map(RadioStation::toRadioState)
+                }
+                playbackManager.setPlaylist(stations.map(RadioStation::toAudioItem))
             }
         }
     }
@@ -113,12 +119,14 @@ internal class HomeViewModel(
         loadMoreJob = viewModelScope.launch {
             loadRadioStationsUseCase
                 .execute(DEFAULT_PAGER_SIZE)
-                .onSuccess { stations ->
-                    appendLoadedStations(stations)
-                }
-                .onFailure {
-                    hideLoadMoreLoading()
-                    sendEvent(HomeScreenEvent.ShowLoadMoreErrorMessage)
+                .results()
+                .collect { result ->
+                    result.onSuccess { stations ->
+                        appendLoadedStations(stations)
+                    }.onFailure {
+                        hideLoadMoreLoading()
+                        sendEvent(HomeScreenEvent.ShowLoadMoreErrorMessage)
+                    }
                 }
         }
     }
@@ -137,11 +145,11 @@ internal class HomeViewModel(
         recommendationStationsState.update { current ->
             current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
         }
-
-//        playbackManager.playPlaylist(
-//            tracks = TODO(),
-//            startIndex = TODO()
-//        )
+        playbackManager.setPlaylist(
+            recommendationStationsState.value
+                .filterIsInstance<HomeScreenRadioState.Success>()
+                .map(HomeScreenRadioState.Success::toAudioItem),
+        )
     }
 
     private fun observePlaybackState() = viewModelScope.launch {
