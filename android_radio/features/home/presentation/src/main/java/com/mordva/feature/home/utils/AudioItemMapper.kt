@@ -1,5 +1,6 @@
 package com.mordva.feature.home.utils
 
+import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.domain.domain.model.RadioStation
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.player.api.model.AudioItem
@@ -23,10 +24,18 @@ internal fun HomeScreenRadioState.Success.toAudioItem() = AudioItem(
 )
 
 
-internal fun RadioStation.toAudioItem() = AudioItem(
+internal fun PlaybackData.toAudioItem() = AudioItem(
+    id = id,
+    uri = uri,
+    title = title,
+    artist = artist,
+    artworkUri = artworkUri,
+)
+
+internal fun HomeScreenRadioState.Success.toPlaybackData() = PlaybackData(
     id = id.toString(),
     uri = streamUrl,
     title = title,
-    artist = description,
-    artworkUri = imageUrl,
+    artist = description.takeIf(String::isNotBlank),
+    artworkUri = artworkUrl,
 )

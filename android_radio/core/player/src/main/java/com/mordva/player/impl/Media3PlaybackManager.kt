@@ -1,5 +1,6 @@
 package com.mordva.player.impl
 
+import android.R.attr.track
 import android.content.ComponentName
 import android.content.Context
 import android.os.SystemClock.elapsedRealtime
@@ -10,11 +11,13 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.mordva.datastore.api.repository.PlaybackPreferencesRepository
 import com.mordva.player.api.AppMediaSessionService
 import com.mordva.player.api.PlaybackManager
 import com.mordva.player.api.model.AudioItem
 import com.mordva.player.api.model.PlaybackState
 import com.mordva.player.impl.utils.toMediaItem
+import com.mordva.player.impl.utils.toPlaybackData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,6 +33,7 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class Media3PlaybackManager(
     private val context: Context,
     private val scope: CoroutineScope,
+    private val playbackPreferencesRepository: PlaybackPreferencesRepository,
 ) : PlaybackManager {
 
     private val _state = MutableStateFlow(PlaybackState())
@@ -63,6 +67,8 @@ internal class Media3PlaybackManager(
             }
         }
     }
+
+    override val size: Int = controller?.mediaItemCount ?: -1
 
     override suspend fun connect() {
         Log.d(TAG, "connect(): controller = $controller")
@@ -115,6 +121,15 @@ internal class Media3PlaybackManager(
             player.setMediaItem(track.toMediaItem())
             player.prepare()
             player.play()
+            safeLastPlaybackState(track)
+        }
+    }
+
+    override fun prepare(track: AudioItem) {
+        _state.update { it.copy(error = null) }
+        executeWhenConnected { player ->
+            player.setMediaItem(track.toMediaItem())
+            player.prepare()
         }
     }
 
@@ -244,6 +259,10 @@ internal class Media3PlaybackManager(
                 delay(500L.milliseconds)
             }
         }
+    }
+
+    private fun safeLastPlaybackState(track: AudioItem) = scope.launch {
+        playbackPreferencesRepository.update(track.toPlaybackData())
     }
 
     private fun Player.safePosition(): Long {

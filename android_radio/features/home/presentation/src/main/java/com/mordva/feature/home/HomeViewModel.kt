@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mordva.datastore.api.model.CityData
 import com.mordva.datastore.api.repository.FilterPreferencesRepository
+import com.mordva.datastore.api.repository.PlaybackPreferencesRepository
 import com.mordva.domain.domain.model.RadioStation
 import com.mordva.domain.domain.usecase.LoadRadioStationsUseCase
 import com.mordva.feature.home.state.HomeScreenAction
@@ -12,6 +13,7 @@ import com.mordva.feature.home.state.HomeScreenEvent
 import com.mordva.feature.home.state.HomeScreenRadioState
 import com.mordva.feature.home.state.HomeScreenState
 import com.mordva.feature.home.utils.toAudioItem
+import com.mordva.feature.home.utils.toPlaybackData
 import com.mordva.feature.home.utils.toRadioState
 import com.mordva.feature.home.utils.toUiState
 import com.mordva.player.api.PlaybackManager
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -30,6 +33,7 @@ internal class HomeViewModel(
     filterPreferencesRepository: FilterPreferencesRepository,
     private val loadRadioStationsUseCase: LoadRadioStationsUseCase,
     private val playbackManager: PlaybackManager,
+    private val playbackPreferencesRepository: PlaybackPreferencesRepository,
 ) : ViewModel() {
     private val recommendationStationsState =
         MutableStateFlow<List<HomeScreenRadioState>>(emptyList())
@@ -79,6 +83,10 @@ internal class HomeViewModel(
 
     private fun updateCurrentRadioStation(selectedIndex: Int) {
         Log.d(TAG, "updateCurrentRadioStation(): selectedIndex = $selectedIndex")
+        if (playbackManager.size <= 1) {
+            setPlaylist()
+        }
+
         val selectedStation = recommendationStationsState.value.getOrNull(selectedIndex)
 
         if (selectedStation is HomeScreenRadioState.Success) {
@@ -105,9 +113,18 @@ internal class HomeViewModel(
                 recommendationStationsState.update {
                     stations.map(RadioStation::toRadioState)
                 }
-                playbackManager.setPlaylist(stations.map(RadioStation::toAudioItem))
+                prepareInitialRadioStations()
             }
         }
+    }
+
+    private suspend fun prepareInitialRadioStations() {
+        playbackPreferencesRepository.get().firstOrNull()?.let {
+            playbackManager.prepare(it.toAudioItem())
+            return
+        }
+
+        setPlaylist()
     }
 
     private fun loadMoreRadioStation() {
@@ -145,11 +162,8 @@ internal class HomeViewModel(
         recommendationStationsState.update { current ->
             current.dropLast(DEFAULT_LOADING_PAGER_SIZE) + newItems
         }
-        playbackManager.setPlaylist(
-            recommendationStationsState.value
-                .filterIsInstance<HomeScreenRadioState.Success>()
-                .map(HomeScreenRadioState.Success::toAudioItem),
-        )
+
+        setPlaylist()
     }
 
     private fun observePlaybackState() = viewModelScope.launch {
@@ -164,6 +178,14 @@ internal class HomeViewModel(
                 settledIsPlayingState.value = playbackState.isPlaying
             }
         }
+    }
+
+    private fun setPlaylist() {
+        val items = recommendationStationsState.value
+            .filterIsInstance<HomeScreenRadioState.Success>()
+            .map(HomeScreenRadioState.Success::toAudioItem)
+
+        playbackManager.setPlaylist(items)
     }
 
     private companion object {

@@ -7,7 +7,9 @@ import com.mordva.datastore.api.datastore.playbackDataStore
 import com.mordva.datastore.api.model.FilterData
 import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.datastore.api.repository.FilterPreferencesRepository
+import com.mordva.datastore.api.repository.PlaybackPreferencesRepository
 import com.mordva.datastore.impl.provider.FilterPreferencesProvider
+import com.mordva.datastore.impl.provider.PlaybackPreferencesProvider
 import org.koin.core.qualifier.qualifier
 import org.koin.dsl.module
 
@@ -24,6 +26,12 @@ val dataSoreModule = module {
 
     single<DataStore<PlaybackData>>(Qualifiers.PLAYBACK_DATA_STORE) {
         get<Context>().playbackDataStore
+    }
+
+    single<PlaybackPreferencesRepository> {
+        PlaybackPreferencesProvider.provide(
+            dataStore = get(Qualifiers.PLAYBACK_DATA_STORE),
+        )
     }
 }
 

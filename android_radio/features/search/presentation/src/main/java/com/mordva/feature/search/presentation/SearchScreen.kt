@@ -2,6 +2,7 @@ package com.mordva.feature.search.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -20,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mordva.domain.domain.model.RadioStation
 import com.mordva.feature.search.presentation.component.StationListItem
@@ -131,11 +133,14 @@ private fun SearchContent(
 }
 
 @Composable
-private fun MessageContent(text: String) {
+private fun BoxScope.MessageContent(text: String) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().align(Alignment.Center),
     ) {
-        Text(text = text)
+        Text(
+            text = text,
+            textAlign = TextAlign.Center,
+        )
     }
 }

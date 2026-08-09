@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_initial_message">Начните вводить текст для поиска радиостанций</string>
+    <string name="search_empty_message">Радиостанции не найдены</string>
+    <string name="search_error_message">Не удалось загрузить радиостанции</string>
+    <string name="retry">Повторить</string>
+</resources>

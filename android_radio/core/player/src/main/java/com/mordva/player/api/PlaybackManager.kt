@@ -8,9 +8,13 @@ interface PlaybackManager {
 
     val state: StateFlow<PlaybackState>
 
+    val size: Int
+
     suspend fun connect()
 
     fun play(track: AudioItem)
+
+    fun prepare(track: AudioItem)
 
     fun setPlaylist(tracks: List<AudioItem>)
 

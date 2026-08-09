@@ -27,11 +27,3 @@ internal fun AudioItem.toPlaybackData() = PlaybackData(
     artist = artist,
     artworkUri = artworkUri,
 )
-
-internal fun PlaybackData.toAudioItem() = AudioItem(
-    id = id,
-    uri = uri,
-    title = title,
-    artist = artist,
-    artworkUri = artworkUri,
-)

@@ -1,10 +1,8 @@
 package com.mordva.radio.di
 
-import androidx.datastore.core.DataStore
 import com.mordva.connectivity.AndroidNetworkMonitor
 import com.mordva.connectivity.NetworkMonitor
 import com.mordva.connectivity.NetworkRequestRetryManager
-import com.mordva.datastore.api.model.PlaybackData
 import com.mordva.player.api.PlaybackManager
 import com.mordva.player.api.provider.PlaybackManagerProvider
 import com.mordva.radio.domain.MainViewModel
@@ -45,6 +43,7 @@ val appModule = module {
         PlaybackManagerProvider.provide(
             context = get(),
             scope = get(named(APP_SCOPE)),
+            playbackPreferencesRepository = get(),
         )
     }
 }
